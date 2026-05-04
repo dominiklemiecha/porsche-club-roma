@@ -15,7 +15,7 @@ export function EventiTable({ rows, onEdit, onDelete }: Props) {
           <Tr key={e.id}>
             <Td>{new Date(e.data_evento).toLocaleDateString('it-IT')}</Td>
             <Td><Link href={`/eventi/${e.id}`} className="text-porsche hover:underline">{e.titolo}</Link></Td>
-            <Td><span className={e.categoria === 'pista' ? 'rounded bg-red-100 px-2 py-0.5 text-xs text-red-700' : 'rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700'}>{e.categoria}</span></Td>
+            <Td><span className={e.categoria === 'pista' ? 'rounded bg-porsche px-2 py-0.5 text-xs text-cream font-medium uppercase' : 'rounded bg-ink px-2 py-0.5 text-xs text-cream font-medium uppercase'}>{e.categoria}</span></Td>
             <Td>{e.punteggio_base}</Td>
             <Td>{e.prova_abilita ? 'sì' : 'no'}</Td>
             <Td>{e._count?.partecipazioni ?? 0}</Td>

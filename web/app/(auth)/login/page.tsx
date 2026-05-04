@@ -25,12 +25,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-100">
-      <form onSubmit={submit} className="w-80 rounded-lg bg-white p-6 shadow">
+    <div className="flex min-h-screen items-center justify-center bg-ink">
+      <form onSubmit={submit} className="w-80 rounded-lg bg-cream p-6 shadow-xl border-2 border-porsche">
         <div className="mb-4 flex justify-center">
-          <Image src="/porsche-logo.svg" alt="" width={64} height={64} />
+          <Image src="/porsche-logo.png" alt="" width={72} height={72} />
         </div>
-        <h1 className="mb-4 text-center text-lg font-semibold">Porsche Club Roma</h1>
+        <h1 className="mb-1 text-center text-lg font-semibold text-ink">Porsche Club Roma</h1>
+        <p className="mb-5 text-center text-xs text-ink/60">CRM Gestionale</p>
         <div className="space-y-3">
           <div>
             <Label htmlFor="u">Username</Label>
@@ -40,7 +41,7 @@ export default function LoginPage() {
             <Label htmlFor="p">Password</Label>
             <Input id="p" type="password" value={p} onChange={e => setP(e.target.value)} />
           </div>
-          {err && <p className="text-sm text-red-600">{err}</p>}
+          {err && <p className="text-sm text-porsche">{err}</p>}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Accesso…' : 'Accedi'}
           </Button>

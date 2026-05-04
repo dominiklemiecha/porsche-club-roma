@@ -7,10 +7,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-porsche text-white hover:bg-red-700',
-        outline: 'border border-neutral-300 bg-white hover:bg-neutral-100',
-        ghost:   'hover:bg-neutral-100',
-        destructive: 'bg-red-600 text-white hover:bg-red-700',
+        default: 'bg-porsche text-cream hover:bg-ink',
+        outline: 'border border-ink/30 bg-cream text-ink hover:bg-ink/5',
+        ghost:   'text-ink hover:bg-ink/5',
+        destructive: 'bg-ink text-cream hover:bg-porsche',
       },
       size: { default: 'h-9 px-4', sm: 'h-8 px-3', icon: 'h-9 w-9' },
     },
