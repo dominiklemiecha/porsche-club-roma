@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Categoria {
+  turismo
+  pista
+}
+
+model Socio {
+  id              Int             @id @default(autoincrement())
+  numero_tessera  Int             @unique
+  nome            String          @db.VarChar(100)
+  cognome         String          @db.VarChar(100)
+  created_at      DateTime        @default(now())
+  partecipazioni  Partecipazione[]
+
+  @@map("soci")
+}
+
+model Evento {
+  id              Int             @id @default(autoincrement())
+  titolo          String          @db.VarChar(200)
+  data_evento     DateTime        @db.Date
+  categoria       Categoria
+  punteggio_base  Int
+  prova_abilita   Boolean         @default(false)
+  scala_prova     Json?
+  created_at      DateTime        @default(now())
+  partecipazioni  Partecipazione[]
+
+  @@map("eventi")
+}
+
+model Partecipazione {
+  id                Int      @id @default(autoincrement())
+  evento_id         Int
+  socio_id          Int
+  posizione_prova   Int?
+  punteggio_totale  Int
+  evento            Evento   @relation(fields: [evento_id], references: [id], onDelete: Cascade)
+  socio             Socio    @relation(fields: [socio_id], references: [id], onDelete: Restrict)
+
+  @@unique([evento_id, socio_id])
+  @@map("partecipazioni")
+}
+
+model AdminUser {
+  id              Int      @id @default(autoincrement())
+  username        String   @unique @db.VarChar(50)
+  password_hash   String   @db.VarChar(100)
+
+  @@map("admin_users")
+}
