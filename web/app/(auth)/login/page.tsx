@@ -39,25 +39,29 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-ink/50" />
       </div>
 
-      <form onSubmit={submit} className="relative z-10 w-80 rounded-lg bg-white p-6 shadow-2xl border-2 border-porsche">
-        <div className="mb-4 flex justify-center">
+      <form onSubmit={submit} className="relative z-10 w-80 rounded-lg bg-white/80 backdrop-blur-md p-6 shadow-2xl border border-white/40 text-ink">
+        <div className="mb-4 flex justify-center grayscale">
           <Image src="/porsche-logo.png" alt="" width={72} height={72} />
         </div>
-        <h1 className="mb-1 text-center text-lg font-semibold text-ink">Porsche Club Roma</h1>
+        <h1 className="mb-1 text-center text-lg font-semibold">Porsche Club Roma</h1>
         <p className="mb-5 text-center text-xs text-ink/60">CRM Gestionale</p>
         <div className="space-y-3">
           <div>
             <Label htmlFor="u">Username</Label>
-            <Input id="u" value={u} onChange={e => setU(e.target.value)} autoFocus />
+            <Input id="u" value={u} onChange={e => setU(e.target.value)} autoFocus className="bg-white/70 border-ink/40 focus:ring-ink" />
           </div>
           <div>
             <Label htmlFor="p">Password</Label>
-            <Input id="p" type="password" value={p} onChange={e => setP(e.target.value)} />
+            <Input id="p" type="password" value={p} onChange={e => setP(e.target.value)} className="bg-white/70 border-ink/40 focus:ring-ink" />
           </div>
-          {err && <p className="text-sm text-porsche">{err}</p>}
-          <Button type="submit" disabled={loading} className="w-full">
+          {err && <p className="text-sm text-ink">{err}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-9 rounded-md bg-ink text-white font-medium hover:bg-ink/80 transition disabled:opacity-50"
+          >
             {loading ? 'Accesso…' : 'Accedi'}
-          </Button>
+          </button>
         </div>
       </form>
     </div>
