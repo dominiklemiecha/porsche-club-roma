@@ -27,12 +27,15 @@ services:
     volumes:
       - "./def_2026 Classifica PCR.xlsx:/seed/soci.xlsx:ro"
     ports:
-      - "3001:3001"
+      - "3101:3001"
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     depends_on: [api]
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
-      - "3000:3000"
+      - "3100:3000"
