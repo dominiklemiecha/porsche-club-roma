@@ -22,7 +22,9 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-56 flex-col border-r border-ink/10 bg-ink text-cream">
       <div className="flex items-center gap-2 px-4 py-5 border-b border-cream/10">
-        <Image src="/porsche-logo.png" alt="Porsche Club Roma" width={40} height={40} />
+        <div className="rounded-md bg-white p-1 flex items-center justify-center">
+          <Image src="/porsche-logo.png" alt="Porsche Club Roma" width={36} height={36} />
+        </div>
         <div className="text-sm font-semibold leading-tight">Porsche<br/>Club Roma</div>
       </div>
       <nav className="flex-1 px-2 py-3">
