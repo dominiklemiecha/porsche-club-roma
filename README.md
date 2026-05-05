@@ -1,26 +1,22 @@
-# CRM Porsche Club Roma
+# Porsche Club Roma — CRM
 
-Gestionale soci/eventi/classifica per Porsche Club Roma.
+Gestionale soci, eventi e classifica.
 
-## Avvio
+## Sviluppo locale
 
-1. `cp .env.example .env` (su Windows: `copy .env.example .env`) e modifica i valori
-2. (Opzionale) sostituisci il logo placeholder con il logo Porsche reale:
-   - `web/public/porsche-logo.svg`
-   - `api/assets/porsche-logo.png`
-3. `docker compose up -d --build`
-4. Apri http://localhost:3000 e accedi con le credenziali admin (`ADMIN_USER` / `ADMIN_PASS` da `.env`)
+```bash
+cp .env.example .env   # poi modifica i valori
+docker compose up -d --build
+```
 
-Al primo avvio:
-- viene creato l'utente admin
-- vengono importati i soci dal file `def_2026 Classifica PCR.xlsx`
+Apri http://localhost:3100 e accedi con le credenziali in `.env` (`ADMIN_USER` / `ADMIN_PASS`).
 
-## Struttura
+Al primo avvio l'app crea l'utente admin e importa i soci da `def_2026 Classifica PCR.xlsx`.
 
-- `api/` — NestJS + Prisma + PostgreSQL
-- `web/` — Next.js 15 (App Router) + Tailwind
-- `db/` — volume Postgres persistente in `./data/pg`
+## Deploy in produzione
+
+Vedi `docker-compose.prod.yml` e `.env.production.example`.
 
 ## Stack
 
-PostgreSQL 16 · NestJS 10 · Prisma 5 · Next.js 15 · Tailwind · Docker Compose
+PostgreSQL · NestJS · Prisma · Next.js · Tailwind · Docker Compose
