@@ -11,7 +11,11 @@ export function ClassificaTable({ data }: { data: ClassificaResponse }) {
             <Th>Pos</Th><Th>Tessera</Th><Th>Cognome</Th><Th>Nome</Th>
             {data.eventi.map(e => (
               <Th key={e.id} className="text-center" title={e.titolo}>
-                {new Date(e.data_evento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
+                {e.titolo.length > 18 ? e.titolo.slice(0, 16) + '…' : e.titolo}
+                <br />
+                <span className="text-[10px] font-normal opacity-70">
+                  {new Date(e.data_evento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
+                </span>
               </Th>
             ))}
             <Th className="text-right">Tot</Th>
@@ -25,7 +29,7 @@ export function ClassificaTable({ data }: { data: ClassificaResponse }) {
               <Td>{r.socio.cognome}</Td>
               <Td>{r.socio.nome}</Td>
               {data.eventi.map(e => (
-                <Td key={e.id} className="text-center">{r.punti_per_evento[String(e.id)] ?? ''}</Td>
+                <Td key={e.id} className="text-center">{r.punti_per_evento[e.id] ?? ''}</Td>
               ))}
               <Td className="text-right font-bold">{r.totale}</Td>
             </Tr>

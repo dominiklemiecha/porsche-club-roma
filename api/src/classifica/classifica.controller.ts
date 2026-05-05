@@ -1,7 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { Categoria } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ClassificaService } from './classifica.service';
+import { ClassificaService, Scope } from './classifica.service';
 
 function parseDate(s?: string): Date | undefined {
   if (!s) return undefined;
@@ -20,7 +19,7 @@ function parseIds(s?: string): number[] | undefined {
 export class ClassificaController {
   constructor(private svc: ClassificaService) {}
   @Get() get(
-    @Query('categoria') c: Categoria,
+    @Query('categoria') c: Scope,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('eventi') eventi?: string,

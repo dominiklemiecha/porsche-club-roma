@@ -1,7 +1,8 @@
 import { Controller, Get, Param, ParseIntPipe, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PdfClassificaService, ClassificaScope } from './pdf-classifica.service';
+import { PdfClassificaService } from './pdf-classifica.service';
+import { Scope } from '../classifica/classifica.service';
 import { PdfEventoService } from './pdf-evento.service';
 
 function parseDate(s?: string): Date | undefined {
@@ -20,7 +21,7 @@ function parseIds(s?: string): number[] | undefined {
 export class PdfController {
   constructor(private cls: PdfClassificaService, private ev: PdfEventoService) {}
   @Get('classifica') classifica(
-    @Query('categoria') c: ClassificaScope,
+    @Query('categoria') c: Scope,
     @Res() res: Response,
     @Query('from') from?: string,
     @Query('to') to?: string,

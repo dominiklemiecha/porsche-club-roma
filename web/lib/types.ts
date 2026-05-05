@@ -1,4 +1,5 @@
 export type Categoria = 'turismo' | 'pista';
+export type Scope = Categoria | 'generale';
 
 export interface Socio { id: number; numero_tessera: number; nome: string; cognome: string; modello_auto?: string | null; }
 
@@ -20,8 +21,8 @@ export interface Partecipazione {
 }
 
 export interface ClassificaResponse {
-  categoria: Categoria;
-  eventi: { id: number; titolo: string; data_evento: string }[];
+  categoria: Scope;
+  eventi: { id: string; titolo: string; data_evento: string }[];
   righe: {
     posizione: number;
     socio: Socio;

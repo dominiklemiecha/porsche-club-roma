@@ -6,32 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClassificaTable } from '@/components/classifica-table';
 import { api, apiPdf } from '@/lib/api';
-import type { Categoria, ClassificaResponse, Evento } from '@/lib/types';
+import type { ClassificaResponse, Evento, Scope } from '@/lib/types';
 
 type FilterMode = 'none' | 'year' | 'month' | 'range';
-type PdfScope = 'turismo' | 'pista' | 'both';
 
 const NOW = new Date();
 const CURRENT_YEAR = NOW.getFullYear();
 const CURRENT_MONTH = `${CURRENT_YEAR}-${String(NOW.getMonth() + 1).padStart(2, '0')}`;
 
 function computeRange(mode: FilterMode, year: string, month: string, from: string, to: string) {
-  if (mode === 'year' && year) {
-    return { from: `${year}-01-01`, to: `${year}-12-31` };
-  }
+  if (mode === 'year' && year) return { from: `${year}-01-01`, to: `${year}-12-31` };
   if (mode === 'month' && month) {
     const [y, m] = month.split('-').map(Number);
     const last = new Date(y, m, 0).getDate();
     return { from: `${month}-01`, to: `${month}-${String(last).padStart(2, '0')}` };
   }
-  if (mode === 'range') {
-    return { from: from || undefined, to: to || undefined };
-  }
+  if (mode === 'range') return { from: from || undefined, to: to || undefined };
   return { from: undefined, to: undefined };
 }
 
 export default function ClassificaPage() {
-  const [cat, setCat] = useState<Categoria>('turismo');
+  const [scope, setScope] = useState<Scope>('turismo');
   const [data, setData] = useState<ClassificaResponse | null>(null);
 
   const [mode, setMode] = useState<FilterMode>('none');
@@ -40,46 +35,62 @@ export default function ClassificaPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
-  const [allEventi, setAllEventi] = useState<Evento[]>([]);
+  const [allEventiTurismo, setAllEventiTurismo] = useState<Evento[]>([]);
+  const [allEventiPista, setAllEventiPista] = useState<Evento[]>([]);
   const [selectedEventi, setSelectedEventi] = useState<Set<number>>(new Set());
   const [eventoFilterOn, setEventoFilterOn] = useState(false);
 
-  const [pdfScope, setPdfScope] = useState<PdfScope>('turismo');
-  const [hasBoth, setHasBoth] = useState(false);
+  const [pdfScope, setPdfScope] = useState<Scope>('turismo');
 
   const range = useMemo(() => computeRange(mode, year, month, from, to), [mode, year, month, from, to]);
 
-  // load events of current categoria for the picker
-  useEffect(() => {
-    api<Evento[]>(`/eventi?categoria=${cat}`).then(rows => {
-      setAllEventi(rows);
-      setSelectedEventi(new Set(rows.map(r => r.id)));
-    });
-  }, [cat]);
-
-  // detect if both categories have events (to enable "Entrambi")
+  // Load all events of both categories once (and on relevant changes)
   useEffect(() => {
     Promise.all([
       api<Evento[]>('/eventi?categoria=turismo'),
       api<Evento[]>('/eventi?categoria=pista'),
-    ]).then(([t, p]) => setHasBoth(t.length > 0 && p.length > 0));
+    ]).then(([t, p]) => {
+      setAllEventiTurismo(t);
+      setAllEventiPista(p);
+    });
   }, []);
 
-  useEffect(() => { setPdfScope(cat); }, [cat]);
+  // Generale tab is shown only when at least one titolo exists in both categories
+  const generaleAvailable = useMemo(() => {
+    if (allEventiTurismo.length === 0 || allEventiPista.length === 0) return false;
+    const tNames = new Set(allEventiTurismo.map(e => e.titolo.trim().toLowerCase()));
+    return allEventiPista.some(e => tNames.has(e.titolo.trim().toLowerCase()));
+  }, [allEventiTurismo, allEventiPista]);
+
+  // List of events for the filter picker according to current scope
+  const eventiForPicker = useMemo(() => {
+    if (scope === 'turismo') return allEventiTurismo;
+    if (scope === 'pista') return allEventiPista;
+    return [...allEventiTurismo, ...allEventiPista].sort(
+      (a, b) => new Date(a.data_evento).getTime() - new Date(b.data_evento).getTime()
+    );
+  }, [scope, allEventiTurismo, allEventiPista]);
+
+  // Reset selected events when scope changes
+  useEffect(() => {
+    setSelectedEventi(new Set(eventiForPicker.map(e => e.id)));
+  }, [eventiForPicker]);
+
+  useEffect(() => { setPdfScope(scope); }, [scope]);
 
   const eventiQuery = useMemo(() => {
     if (!eventoFilterOn) return undefined;
-    if (selectedEventi.size === 0 || selectedEventi.size === allEventi.length) return undefined;
+    if (selectedEventi.size === 0 || selectedEventi.size === eventiForPicker.length) return undefined;
     return [...selectedEventi].join(',');
-  }, [eventoFilterOn, selectedEventi, allEventi]);
+  }, [eventoFilterOn, selectedEventi, eventiForPicker]);
 
   const queryString = useMemo(() => {
-    const p = new URLSearchParams({ categoria: cat });
+    const p = new URLSearchParams({ categoria: scope });
     if (range.from) p.set('from', range.from);
     if (range.to) p.set('to', range.to);
     if (eventiQuery) p.set('eventi', eventiQuery);
     return p.toString();
-  }, [cat, range, eventiQuery]);
+  }, [scope, range, eventiQuery]);
 
   useEffect(() => {
     api<ClassificaResponse>(`/classifica?${queryString}`).then(setData);
@@ -112,12 +123,12 @@ export default function ClassificaPage() {
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={pdfScope}
-            onChange={e => setPdfScope(e.target.value as PdfScope)}
+            onChange={e => setPdfScope(e.target.value as Scope)}
             className="h-9 rounded-md border border-ink/30 bg-paper px-3 text-sm focus:outline-none focus:ring-2 focus:ring-porsche"
           >
             <option value="turismo">Turismo</option>
             <option value="pista">Pista</option>
-            {hasBoth && <option value="both">Entrambi</option>}
+            {generaleAvailable && <option value="generale">Generale</option>}
           </select>
           <Button variant="outline" onClick={pdf}>Scarica PDF</Button>
         </div>
@@ -165,11 +176,7 @@ export default function ClassificaPage() {
           )}
 
           <label className="flex items-center gap-2 text-sm sm:ml-auto">
-            <input
-              type="checkbox"
-              checked={eventoFilterOn}
-              onChange={e => setEventoFilterOn(e.target.checked)}
-            />
+            <input type="checkbox" checked={eventoFilterOn} onChange={e => setEventoFilterOn(e.target.checked)} />
             Filtra per eventi
           </label>
         </div>
@@ -177,50 +184,42 @@ export default function ClassificaPage() {
         {eventoFilterOn && (
           <div className="border-t border-ink/10 pt-3">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium">Eventi {cat}:</span>
-              <button
-                type="button"
-                onClick={() => setSelectedEventi(new Set(allEventi.map(e => e.id)))}
-                className="text-xs text-porsche hover:underline"
-              >
+              <span className="text-sm font-medium">Eventi {scope}:</span>
+              <button type="button" onClick={() => setSelectedEventi(new Set(eventiForPicker.map(e => e.id)))} className="text-xs text-porsche hover:underline">
                 Seleziona tutti
               </button>
-              <button
-                type="button"
-                onClick={() => setSelectedEventi(new Set())}
-                className="text-xs text-porsche hover:underline"
-              >
+              <button type="button" onClick={() => setSelectedEventi(new Set())} className="text-xs text-porsche hover:underline">
                 Nessuno
               </button>
-              <span className="ml-auto text-xs text-ink/60">{selectedEventi.size}/{allEventi.length}</span>
+              <span className="ml-auto text-xs text-ink/60">{selectedEventi.size}/{eventiForPicker.length}</span>
             </div>
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
-              {allEventi.map(e => (
+              {eventiForPicker.map(e => (
                 <label key={e.id} className="flex items-center gap-2 text-sm rounded px-2 py-1 hover:bg-cream/30">
-                  <input
-                    type="checkbox"
-                    checked={selectedEventi.has(e.id)}
-                    onChange={() => toggleEvento(e.id)}
-                  />
+                  <input type="checkbox" checked={selectedEventi.has(e.id)} onChange={() => toggleEvento(e.id)} />
                   <span className="truncate">
                     <span className="text-ink/50 mr-1">{new Date(e.data_evento).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}</span>
                     {e.titolo}
                   </span>
                 </label>
               ))}
-              {allEventi.length === 0 && <span className="text-sm text-ink/50">Nessun evento</span>}
+              {eventiForPicker.length === 0 && <span className="text-sm text-ink/50">Nessun evento</span>}
             </div>
           </div>
         )}
       </div>
 
-      <Tabs value={cat} onValueChange={v => setCat(v as Categoria)}>
+      <Tabs value={scope} onValueChange={v => setScope(v as Scope)}>
         <TabsList>
           <TabsTrigger value="turismo">Turismo</TabsTrigger>
           <TabsTrigger value="pista">Pista</TabsTrigger>
+          {generaleAvailable && <TabsTrigger value="generale">Generale</TabsTrigger>}
         </TabsList>
-        <TabsContent value="turismo">{data && cat === 'turismo' && <ClassificaTable data={data} />}</TabsContent>
-        <TabsContent value="pista">{data && cat === 'pista' && <ClassificaTable data={data} />}</TabsContent>
+        <TabsContent value="turismo">{data && scope === 'turismo' && <ClassificaTable data={data} />}</TabsContent>
+        <TabsContent value="pista">{data && scope === 'pista' && <ClassificaTable data={data} />}</TabsContent>
+        {generaleAvailable && (
+          <TabsContent value="generale">{data && scope === 'generale' && <ClassificaTable data={data} />}</TabsContent>
+        )}
       </Tabs>
     </div>
   );
