@@ -28,15 +28,15 @@ export default function EventoPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{ev.titolo}</h1>
-          <p className="text-sm text-neutral-600">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold break-words">{ev.titolo}</h1>
+          <p className="text-sm text-ink/60">
             {new Date(ev.data_evento).toLocaleDateString('it-IT')} · {ev.categoria} · base {ev.punteggio_base} pt
             {ev.prova_abilita && ev.scala_prova && ` · prova: ${ev.scala_prova.join('/')}`}
           </p>
         </div>
-        <div className="space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={downloadPdf}>Scarica PDF</Button>
           <Button onClick={() => setOpen(true)}>Registra partecipanti</Button>
         </div>

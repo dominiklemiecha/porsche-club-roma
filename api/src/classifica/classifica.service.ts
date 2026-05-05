@@ -6,17 +6,24 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ClassificaService {
   constructor(private prisma: PrismaService) {}
 
-  async build(categoria: Categoria) {
+  async build(categoria: Categoria, from?: Date, to?: Date, eventoIds?: number[]) {
+    const dataFilter: any = {};
+    if (from) dataFilter.gte = from;
+    if (to) dataFilter.lte = to;
     const eventi = await this.prisma.evento.findMany({
-      where: { categoria },
+      where: {
+        categoria,
+        ...(from || to ? { data_evento: dataFilter } : {}),
+        ...(eventoIds && eventoIds.length > 0 ? { id: { in: eventoIds } } : {}),
+      },
       orderBy: { data_evento: 'asc' },
       select: { id: true, titolo: true, data_evento: true },
     });
-    const eventoIds = eventi.map(e => e.id);
+    const ids = eventi.map(e => e.id);
 
-    const partecipazioni = eventoIds.length
+    const partecipazioni = ids.length
       ? await this.prisma.partecipazione.findMany({
-          where: { evento_id: { in: eventoIds } },
+          where: { evento_id: { in: ids } },
           include: { socio: true },
         })
       : [];

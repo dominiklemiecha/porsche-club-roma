@@ -6,6 +6,8 @@ const config: Config = {
       colors: {
         porsche: '#B12B28',
         cream:   '#EBD698',
+        sand:    '#F7F1E1',
+        paper:   '#FFFFFF',
         ink:     '#000000',
       },
     },

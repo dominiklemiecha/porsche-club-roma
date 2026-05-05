@@ -1,6 +1,6 @@
 export type Categoria = 'turismo' | 'pista';
 
-export interface Socio { id: number; numero_tessera: number; nome: string; cognome: string; }
+export interface Socio { id: number; numero_tessera: number; nome: string; cognome: string; modello_auto?: string | null; }
 
 export interface Evento {
   id: number;

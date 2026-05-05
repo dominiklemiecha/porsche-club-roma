@@ -18,6 +18,7 @@ export function SocioFormDialog({ open, onOpenChange, socio, onSaved }: Props) {
   const [tess, setTess] = useState('');
   const [nome, setNome] = useState('');
   const [cog, setCog] = useState('');
+  const [auto, setAuto] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const editing = !!socio;
 
@@ -26,6 +27,7 @@ export function SocioFormDialog({ open, onOpenChange, socio, onSaved }: Props) {
       setTess(socio ? String(socio.numero_tessera) : '');
       setNome(socio?.nome ?? '');
       setCog(socio?.cognome ?? '');
+      setAuto(socio?.modello_auto ?? '');
       setErr(null);
     }
   }, [open, socio]);
@@ -33,7 +35,12 @@ export function SocioFormDialog({ open, onOpenChange, socio, onSaved }: Props) {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const body = JSON.stringify({ numero_tessera: Number(tess), nome, cognome: cog });
+      const body = JSON.stringify({
+        numero_tessera: Number(tess),
+        nome,
+        cognome: cog,
+        modello_auto: auto.trim() === '' ? null : auto.trim(),
+      });
       if (editing) await api(`/soci/${socio!.id}`, { method: 'PATCH', body });
       else         await api('/soci',                { method: 'POST', body });
       onSaved(); onOpenChange(false);
@@ -48,7 +55,8 @@ export function SocioFormDialog({ open, onOpenChange, socio, onSaved }: Props) {
           <div><Label>N. tessera</Label><Input type="number" value={tess} onChange={e => setTess(e.target.value)} required /></div>
           <div><Label>Cognome</Label><Input value={cog} onChange={e => setCog(e.target.value)} required /></div>
           <div><Label>Nome</Label><Input value={nome} onChange={e => setNome(e.target.value)} required /></div>
-          {err && <p className="text-sm text-red-600">{err}</p>}
+          <div><Label>Modello auto</Label><Input value={auto} onChange={e => setAuto(e.target.value)} placeholder="es. 992 GT3 RS" /></div>
+          {err && <p className="text-sm text-porsche">{err}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annulla</Button>
             <Button type="submit">Salva</Button>

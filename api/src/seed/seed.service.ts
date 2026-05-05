@@ -12,6 +12,37 @@ export class SeedService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     await this.seedAdmin();
     await this.seedSoci();
+    await this.backfillModelloAuto();
+  }
+
+  private async backfillModelloAuto() {
+    const file = '/seed/soci.xlsx';
+    if (!fs.existsSync(file)) return;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(file);
+    const top = wb.getWorksheet('TOP 20');
+    if (!top) return;
+
+    const modelliByName = new Map<string, string>();
+    top.eachRow({ includeEmpty: false }, (row, idx) => {
+      if (idx === 1) return;
+      const cognome = String(row.getCell(2).value ?? '').trim().toLowerCase();
+      const nome    = String(row.getCell(3).value ?? '').trim().toLowerCase();
+      const modello = String(row.getCell(4).value ?? '').trim();
+      if (cognome && nome && modello) modelliByName.set(`${cognome}|${nome}`, modello);
+    });
+    if (modelliByName.size === 0) return;
+
+    const soci = await this.prisma.socio.findMany({ where: { modello_auto: null } });
+    let updated = 0;
+    for (const s of soci) {
+      const key = `${s.cognome.toLowerCase()}|${s.nome.toLowerCase()}`;
+      const m = modelliByName.get(key);
+      if (!m) continue;
+      await this.prisma.socio.update({ where: { id: s.id }, data: { modello_auto: m } });
+      updated++;
+    }
+    if (updated > 0) this.log.log(`Backfill modello_auto: ${updated} soci aggiornati`);
   }
 
   private async seedAdmin() {
@@ -52,7 +83,25 @@ export class SeedService implements OnApplicationBootstrap {
     });
 
     if (created.length === 0) { this.log.warn('No soci rows found in Excel'); return; }
-    await this.prisma.socio.createMany({ data: created, skipDuplicates: true });
-    this.log.log(`Seeded ${created.length} soci`);
+
+    const top = wb.getWorksheet('TOP 20');
+    const modelliByName = new Map<string, string>();
+    if (top) {
+      top.eachRow({ includeEmpty: false }, (row, idx) => {
+        if (idx === 1) return;
+        const cognome = String(row.getCell(2).value ?? '').trim().toLowerCase();
+        const nome    = String(row.getCell(3).value ?? '').trim().toLowerCase();
+        const modello = String(row.getCell(4).value ?? '').trim();
+        if (cognome && nome && modello) modelliByName.set(`${cognome}|${nome}`, modello);
+      });
+    }
+
+    const enriched = created.map(s => ({
+      ...s,
+      modello_auto: modelliByName.get(`${s.cognome.toLowerCase()}|${s.nome.toLowerCase()}`) ?? null,
+    }));
+
+    await this.prisma.socio.createMany({ data: enriched, skipDuplicates: true });
+    this.log.log(`Seeded ${enriched.length} soci (${enriched.filter(s => s.modello_auto).length} con modello auto)`);
   }
 }

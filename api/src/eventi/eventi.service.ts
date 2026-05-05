@@ -3,6 +3,7 @@ import { Categoria } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
+import { calcolaPunteggio } from './score.util';
 
 @Injectable()
 export class EventiService {
@@ -47,14 +48,51 @@ export class EventiService {
   async update(id: number, dto: UpdateEventoDto) {
     const ex = await this.prisma.evento.findUnique({ where: { id } });
     if (!ex) throw new NotFoundException();
-    return this.prisma.evento.update({
+
+    const newProvaAbilita = dto.prova_abilita ?? ex.prova_abilita;
+    const newScalaProva = dto.scala_prova !== undefined ? dto.scala_prova : (ex.scala_prova as number[] | null);
+    if (newProvaAbilita && (!newScalaProva || newScalaProva.length === 0)) {
+      throw new BadRequestException('scala_prova richiesta quando prova_abilita=true');
+    }
+    if (!newProvaAbilita && dto.scala_prova && dto.scala_prova.length > 0) {
+      throw new BadRequestException('scala_prova non valida senza prova_abilita');
+    }
+
+    const updated = await this.prisma.evento.update({
       where: { id },
       data: {
         ...dto,
         data_evento: dto.data_evento ? new Date(dto.data_evento) : undefined,
-        scala_prova: dto.scala_prova as any,
+        scala_prova: dto.scala_prova !== undefined
+          ? (newProvaAbilita ? (dto.scala_prova as any) : null)
+          : undefined,
       },
     });
+
+    const scoringChanged =
+      dto.punteggio_base !== undefined ||
+      dto.prova_abilita !== undefined ||
+      dto.scala_prova !== undefined;
+
+    if (scoringChanged) {
+      const parts = await this.prisma.partecipazione.findMany({ where: { evento_id: id } });
+      const scala = (updated.scala_prova as number[] | null) ?? null;
+      await this.prisma.$transaction(parts.map(p => {
+        const posizione = updated.prova_abilita ? p.posizione_prova : null;
+        const punteggio = calcolaPunteggio({
+          punteggio_base: updated.punteggio_base,
+          prova_abilita: updated.prova_abilita,
+          scala_prova: scala,
+          posizione_prova: posizione,
+        });
+        return this.prisma.partecipazione.update({
+          where: { id: p.id },
+          data: { posizione_prova: posizione, punteggio_totale: punteggio },
+        });
+      }));
+    }
+
+    return updated;
   }
 
   async remove(id: number) {

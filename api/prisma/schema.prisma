@@ -17,6 +17,7 @@ model Socio {
   numero_tessera  Int             @unique
   nome            String          @db.VarChar(100)
   cognome         String          @db.VarChar(100)
+  modello_auto    String?         @db.VarChar(150)
   created_at      DateTime        @default(now())
   partecipazioni  Partecipazione[]
 

@@ -26,11 +26,11 @@ export default function SociPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold">Soci</h1>
         <Button onClick={() => { setEditing(null); setOpen(true); }}>+ Nuovo socio</Button>
       </div>
-      <Input placeholder="Cerca per cognome o tessera…" value={q} onChange={e => setQ(e.target.value)} className="mb-4 max-w-sm" />
+      <Input placeholder="Cerca per cognome o tessera…" value={q} onChange={e => setQ(e.target.value)} className="mb-4 sm:max-w-sm" />
       <SociTable rows={rows} onEdit={s => { setEditing(s); setOpen(true); }} onDelete={del} />
       <SocioFormDialog open={open} onOpenChange={setOpen} socio={editing} onSaved={load} />
     </div>
