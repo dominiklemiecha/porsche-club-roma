@@ -1,3 +1,9 @@
+networks:
+  porsche-internal:
+    driver: bridge
+  dokploy-network:
+    external: true
+
 services:
   db:
     image: postgres:16-alpine
@@ -13,6 +19,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks: [porsche-internal]
 
   api:
     build: ./api
@@ -30,6 +37,7 @@ services:
       - "./def_2026 Classifica PCR.xlsx:/seed/soci.xlsx:ro"
     expose:
       - "3001"
+    networks: [porsche-internal]
 
   web:
     build:
@@ -43,6 +51,9 @@ services:
       INTERNAL_API_URL: http://api:3001
     expose:
       - "3000"
+    networks:
+      - porsche-internal
+      - dokploy-network
 
 volumes:
   pgdata:
