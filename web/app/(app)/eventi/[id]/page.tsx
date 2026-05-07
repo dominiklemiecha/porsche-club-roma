@@ -42,6 +42,24 @@ export default function EventoPage() {
         </div>
       </div>
 
+      <div className="sm:hidden space-y-2">
+        {ev.partecipazioni.map(p => (
+          <div key={p.id} className="rounded-md border border-ink/10 bg-paper p-3 shadow-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium truncate">{p.socio.cognome} {p.socio.nome}</div>
+                <div className="text-xs text-ink/60">#{p.socio.numero_tessera}{ev.prova_abilita && ` · prova: ${p.posizione_prova ?? '—'}`}</div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-xs text-ink/60">Punti</div>
+                <div className="text-lg font-bold">{p.punteggio_totale}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {ev.partecipazioni.length === 0 && <div className="text-center text-ink/50 py-6">Nessun partecipante</div>}
+      </div>
+      <div className="hidden sm:block">
       <Table>
         <Thead><Tr>
           {ev.prova_abilita && <Th>Pos. prova</Th>}
@@ -60,6 +78,7 @@ export default function EventoPage() {
           {ev.partecipazioni.length === 0 && <Tr><Td colSpan={5} className="text-center text-neutral-500">Nessun partecipante</Td></Tr>}
         </Tbody>
       </Table>
+      </div>
 
       <PartecipazioniDialog open={open} onOpenChange={setOpen} evento={ev} current={ev.partecipazioni} onSaved={load} />
     </div>
