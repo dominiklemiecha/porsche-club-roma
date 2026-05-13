@@ -34,7 +34,7 @@ services:
       CORS_ORIGIN:  ${CORS_ORIGIN}
       NODE_ENV:     production
     volumes:
-      - "./def_2026 Classifica PCR.xlsx:/seed/soci.xlsx:ro"
+      - "./elenco_soci_2026-03-10.xlsx:/seed/soci.xlsx:ro"
     expose:
       - "3001"
     networks: [porsche-internal]
