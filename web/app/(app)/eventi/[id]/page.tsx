@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
 import { PartecipazioniDialog } from '@/components/partecipazioni-dialog';
+import { ImportXlsxDialog } from '@/components/import-xlsx-dialog';
 import { api, apiPdf } from '@/lib/api';
 import type { Evento, Partecipazione, Socio } from '@/lib/types';
 
@@ -13,6 +14,7 @@ export default function EventoPage() {
   const { id } = useParams<{ id: string }>();
   const [ev, setEv] = useState<EventoDetail | null>(null);
   const [open, setOpen] = useState(false);
+  const [openImport, setOpenImport] = useState(false);
 
   async function load() { setEv(await api<EventoDetail>(`/eventi/${id}`)); }
   useEffect(() => { load(); }, [id]);
@@ -38,6 +40,7 @@ export default function EventoPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={downloadPdf}>Scarica PDF</Button>
+          <Button variant="outline" onClick={() => setOpenImport(true)}>Importa da Excel</Button>
           <Button onClick={() => setOpen(true)}>Registra partecipanti</Button>
         </div>
       </div>
@@ -81,6 +84,7 @@ export default function EventoPage() {
       </div>
 
       <PartecipazioniDialog open={open} onOpenChange={setOpen} evento={ev} current={ev.partecipazioni} onSaved={load} />
+      <ImportXlsxDialog open={openImport} onOpenChange={setOpenImport} evento={ev} current={ev.partecipazioni} onSaved={load} />
     </div>
   );
 }
