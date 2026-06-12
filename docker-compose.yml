@@ -25,7 +25,7 @@ services:
       CORS_ORIGIN:  ${CORS_ORIGIN}
       NODE_ENV:     production
     volumes:
-      - "./elenco_soci_2026-03-10.xlsx:/seed/soci.xlsx:ro"
+      - "./elenco_soci_2026-06-08.xlsx:/seed/soci.xlsx:ro"
     ports:
       - "3101:3001"
 

@@ -36,22 +36,26 @@ export class SeedService implements OnApplicationBootstrap {
     const ws = wb.worksheets[0];
     if (!ws) { this.log.warn('No sheet found in seed file'); return; }
 
-    // Columns: B=N., C=Cognome, D=Nome, E=Tessera club nr. Header on row 1, data from row 3.
-    const created: { numero_tessera: number; nome: string; cognome: string }[] = [];
+    // Columns: A=N., B=Cognome, C=Nome, D=Tessera, E=Modello auto, F=Versione, G=Anno. Header on row 1, data from row 2.
+    const created: { numero_tessera: number; nome: string; cognome: string; modello_auto: string | null }[] = [];
     const seen = new Set<number>();
     let skippedNoTessera = 0;
 
     ws.eachRow({ includeEmpty: false }, (row, idx) => {
-      if (idx < 3) return;
-      const cognome = String(row.getCell(3).value ?? '').trim();
-      const nome    = String(row.getCell(4).value ?? '').trim();
-      const tessRaw = row.getCell(5).value;
-      const tess    = Number(tessRaw);
+      if (idx < 2) return;
+      const cognome  = String(row.getCell(2).value ?? '').trim();
+      const nome     = String(row.getCell(3).value ?? '').trim();
+      const tessRaw  = row.getCell(4).value;
+      const tess     = Number(tessRaw);
+      const modello  = String(row.getCell(5).value ?? '').trim();
+      const versione = String(row.getCell(6).value ?? '').trim();
+      const anno     = String(row.getCell(7).value ?? '').trim();
       if (!cognome || !nome) return;
       if (!Number.isFinite(tess) || tess <= 0) { skippedNoTessera++; return; }
       if (seen.has(tess)) return;
       seen.add(tess);
-      created.push({ numero_tessera: tess, nome, cognome });
+      const auto = [modello, versione].filter(Boolean).join(' ') + (anno ? ` (${anno})` : '');
+      created.push({ numero_tessera: tess, nome, cognome, modello_auto: auto.trim() || null });
     });
 
     if (created.length === 0) { this.log.warn('No soci rows found in Excel'); return; }
