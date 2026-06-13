@@ -47,7 +47,7 @@ export default function DashboardPage() {
       {/* THREE COLUMNS */}
       <section className="grid gap-6 lg:grid-cols-3">
         {/* Classifica generale */}
-        <div className="card flex flex-col p-5">
+        <div className="card flex min-w-0 flex-col overflow-hidden p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Classifica generale</h2>
             <Link href="/classifica" className="inline-flex items-center gap-1 text-xs font-medium text-porsche">
@@ -87,7 +87,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Prossimi eventi */}
-        <div className="card flex flex-col p-5">
+        <div className="card flex min-w-0 flex-col p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-semibold">Prossimi eventi</h2>
             <Link href="/eventi" className="inline-flex items-center gap-1 text-xs font-medium text-porsche">
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Ultimo evento */}
-        <div className="card flex flex-col overflow-hidden">
+        <div className="card flex min-w-0 flex-col overflow-hidden">
           <div className="flex items-center justify-between px-5 pt-5">
             <h2 className="text-base font-semibold">Ultimo evento</h2>
           </div>
