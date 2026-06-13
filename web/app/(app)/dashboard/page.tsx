@@ -41,7 +41,7 @@ export default function DashboardPage() {
         <StatCard icon={Users} value={d?.stats.soci ?? '—'} label="Soci iscritti" href="/soci" linkLabel="Vai ai soci" />
         <StatCard icon={CalendarDays} value={d?.stats.eventi ?? '—'} label="Eventi in stagione" href="/eventi" linkLabel="Vai agli eventi" />
         <StatCard icon={Star} value={d?.stats.puntiAssegnati ?? '—'} label="Punti assegnati" href="/classifica" linkLabel="Vai alla classifica" />
-        <StatCard icon={Trophy} value={d?.stats.leader?.punti ?? '—'} label="Leader classifica" href="/classifica" linkLabel="Vedi classifica" />
+        <StatCard icon={Trophy} value={d?.stats.leader?.punti ?? '—'} label="Leader classifica" href="/classifica" linkLabel="Vai alla classifica" />
       </section>
 
       {/* THREE COLUMNS */}
@@ -51,7 +51,7 @@ export default function DashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Classifica generale</h2>
             <Link href="/classifica" className="inline-flex items-center gap-1 text-xs font-medium text-porsche">
-              Vedi tutto <ArrowRight className="h-3.5 w-3.5" />
+              Vedi classifica completa <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
@@ -91,7 +91,7 @@ export default function DashboardPage() {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-semibold">Prossimi eventi</h2>
             <Link href="/eventi" className="inline-flex items-center gap-1 text-xs font-medium text-porsche">
-              Vedi tutti <ArrowRight className="h-3.5 w-3.5" />
+              Vedi tutti gli eventi <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
           <div className="flex flex-col gap-1">

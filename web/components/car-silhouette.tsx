@@ -3,37 +3,37 @@ import { carBodyType, type CarBody } from '@/lib/car-model';
 interface Shape { path: string; wheels: [number, number][]; r: number; }
 
 const SHAPES: Record<CarBody, Shape> = {
-  // 911 — fastback coupé
+  // 911 — coupé fastback
   sport911: {
-    path: 'M12 76 L16 64 C26 58 44 55 64 53 C82 37 104 32 126 33 C150 34 168 44 196 56 C212 61 224 66 228 76 Z',
-    wheels: [[66, 76], [178, 76]], r: 17,
+    path: 'M16 80 L18 64 C26 56 40 52 58 50 C76 36 100 30 126 31 C154 32 176 41 204 55 C222 61 236 66 242 76 L242 80 L210 80 A20 20 0 0 0 170 80 L92 80 A20 20 0 0 0 52 80 Z',
+    wheels: [[72, 80], [190, 80]], r: 17,
   },
-  // 718 Cayman/Boxster — mid-engine, coda corta a cuneo
+  // 718 Cayman/Boxster — mid-engine, coda corta
   sport718: {
-    path: 'M14 76 L16 62 C28 56 46 54 66 53 C84 41 100 36 120 37 C146 38 168 47 198 60 C206 64 213 70 213 76 Z',
-    wheels: [[64, 76], [176, 76]], r: 16,
+    path: 'M18 80 L20 62 C30 55 46 52 66 51 C82 42 100 37 122 37 C146 37 168 44 196 56 C214 62 228 67 234 76 L234 80 L206 80 A20 20 0 0 0 166 80 L92 80 A20 20 0 0 0 52 80 Z',
+    wheels: [[72, 80], [186, 80]], r: 17,
   },
   // Cayenne/Macan — SUV, tetto alto e lungo
   suv: {
-    path: 'M12 78 L15 56 C17 46 26 40 40 38 C50 30 66 26 96 25 L150 26 C170 27 184 33 198 43 C208 49 216 53 222 60 L223 78 Z',
-    wheels: [[64, 78], [180, 78]], r: 18,
+    path: 'M14 82 L16 56 C18 46 28 41 44 39 C54 30 70 27 100 26 C140 26 152 27 172 29 C190 31 204 38 216 48 C226 54 236 59 242 68 L242 82 L214 82 A22 22 0 0 0 170 82 L94 82 A22 22 0 0 0 50 82 Z',
+    wheels: [[72, 82], [192, 82]], r: 19,
   },
   // Panamera/Taycan — berlina 4 porte bassa e lunga
   sedan: {
-    path: 'M10 76 L14 64 C26 58 44 55 66 54 C82 44 104 40 138 41 C164 42 186 48 208 57 C218 61 227 66 231 76 Z',
-    wheels: [[62, 76], [184, 76]], r: 16,
+    path: 'M12 80 L14 64 C26 57 42 53 64 52 C80 43 104 39 140 40 C168 41 192 47 214 56 C228 61 242 66 248 76 L248 80 L216 80 A20 20 0 0 0 176 80 L86 80 A20 20 0 0 0 46 80 Z',
+    wheels: [[66, 80], [196, 80]], r: 17,
   },
 };
 
 export function CarSilhouette({ modello, body, className = '' }: { modello?: string | null; body?: CarBody; className?: string }) {
   const shape = SHAPES[body ?? carBodyType(modello)];
   return (
-    <svg viewBox="0 0 240 96" className={className} role="img" aria-label={modello ?? 'Porsche'}>
+    <svg viewBox="0 0 260 96" className={className} role="img" aria-label={modello ?? 'Porsche'}>
       <path d={shape.path} fill="currentColor" />
       {shape.wheels.map(([cx, cy], i) => (
         <g key={i}>
           <circle cx={cx} cy={cy} r={shape.r} fill="currentColor" />
-          <circle cx={cx} cy={cy} r={shape.r * 0.5} fill="none" stroke="#ffffff" strokeOpacity="0.28" strokeWidth="3" />
+          <circle cx={cx} cy={cy} r={shape.r * 0.47} fill="none" stroke="#ffffff" strokeOpacity="0.3" strokeWidth={Math.max(3, shape.r * 0.18)} />
         </g>
       ))}
     </svg>

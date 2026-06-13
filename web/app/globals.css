@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
+/* Scala base dell'UI: il 100% rende come uno zoom browser al 75% */
+html { font-size: 75%; }
 html, body { height: 100%; }
 body {
   @apply bg-canvas text-ink antialiased;
