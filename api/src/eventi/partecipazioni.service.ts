@@ -1,15 +1,17 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AnniService } from '../anni/anni.service';
 import { calcolaPunteggio } from './score.util';
 import { SetPartecipantiDto } from './dto/partecipanti.dto';
 
 @Injectable()
 export class PartecipazioniService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private anni: AnniService) {}
 
   async setForEvento(evento_id: number, dto: SetPartecipantiDto) {
     const ev = await this.prisma.evento.findUnique({ where: { id: evento_id } });
     if (!ev) throw new NotFoundException('evento');
+    await this.anni.assertAttivo(ev.anno);
 
     const scala = (ev.scala_prova as number[] | null) ?? null;
     const seenSoci = new Set<number>();

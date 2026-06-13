@@ -17,7 +17,9 @@ export class EventiController {
     private parts: PartecipazioniService,
     private importSvc: ImportPartecipantiService,
   ) {}
-  @Get()       list(@Query('categoria') c?: Categoria) { return this.svc.list(c); }
+  @Get() list(@Query('anno') anno?: string, @Query('categoria') c?: Categoria) {
+    return this.svc.list(anno ? Number(anno) : undefined, c);
+  }
   @Get(':id')  get(@Param('id', ParseIntPipe) id: number) { return this.svc.get(id); }
   @Post()      create(@Body() dto: CreateEventoDto) { return this.svc.create(dto); }
   @Patch(':id') update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateEventoDto) { return this.svc.update(id, dto); }
