@@ -27,17 +27,17 @@ export function Sidebar() {
   }
 
   const Nav = (
-    <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+    <nav className="flex-1 py-4 overflow-y-auto">
       {links.map(l => {
         const active = path?.startsWith(l.href);
         return (
           <Link key={l.href} href={l.href}
             className={cn(
-              'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition',
-              active ? 'bg-porsche/[0.06] font-semibold text-porsche' : 'text-ink/70 hover:bg-ink/[0.04] hover:text-ink',
+              'relative flex items-center gap-3 px-5 py-2.5 text-sm transition',
+              active ? 'bg-black/[0.05] font-semibold text-ink' : 'text-ink/80 hover:bg-black/[0.03]',
             )}>
-            {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-porsche" />}
-            <l.icon className={cn('h-[18px] w-[18px] transition', active ? 'text-porsche' : 'text-ink/50 group-hover:text-ink')} />
+            {active && <span className="absolute left-0 top-0 h-full w-1 bg-porsche" />}
+            <l.icon className={cn('h-[18px] w-[18px]', active ? 'text-porsche' : 'text-ink/70')} strokeWidth={2} />
             {l.label}
           </Link>
         );
@@ -47,7 +47,7 @@ export function Sidebar() {
 
   const Logout = (
     <button onClick={logout}
-      className="m-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-ink/60 transition hover:bg-ink/[0.04] hover:text-ink">
+      className="flex items-center gap-3 px-5 py-3 text-sm text-ink/70 transition hover:bg-black/[0.03] hover:text-ink">
       <LogOut className="h-[18px] w-[18px]" /> Logout
     </button>
   );
@@ -56,7 +56,7 @@ export function Sidebar() {
     <>
       {/* Mobile top bar */}
       <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-line bg-paper px-3 py-2.5">
-        <button onClick={() => setOpen(true)} aria-label="Apri menu" className="rounded-md p-2 hover:bg-ink/[0.04]">
+        <button onClick={() => setOpen(true)} aria-label="Apri menu" className="rounded-md p-2 hover:bg-black/[0.04]">
           <Menu className="h-5 w-5" />
         </button>
         <Brand compact />
@@ -65,11 +65,9 @@ export function Sidebar() {
 
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-paper lg:flex">
-        <div className="px-5 py-5">
-          <Brand />
-        </div>
+        <div className="px-5 py-6"><Brand /></div>
         {Nav}
-        {Logout}
+        <div className="pb-3">{Logout}</div>
       </aside>
 
       {/* Mobile drawer */}
@@ -78,12 +76,12 @@ export function Sidebar() {
           <div className="absolute inset-0 bg-ink/50" onClick={() => setOpen(false)} />
           <aside className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-line bg-paper shadow-xl">
             <button onClick={() => setOpen(false)} aria-label="Chiudi menu"
-              className="absolute right-2 top-2 rounded-md p-2 hover:bg-ink/[0.04]">
+              className="absolute right-2 top-2 rounded-md p-2 hover:bg-black/[0.04]">
               <X className="h-5 w-5" />
             </button>
-            <div className="px-5 py-5"><Brand /></div>
+            <div className="px-5 py-6"><Brand /></div>
             {Nav}
-            {Logout}
+            <div className="pb-3">{Logout}</div>
           </aside>
         </div>
       )}

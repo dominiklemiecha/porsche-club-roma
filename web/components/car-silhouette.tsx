@@ -31,10 +31,7 @@ export function CarSilhouette({ modello, body, className = '' }: { modello?: str
     <svg viewBox="0 0 260 96" className={className} role="img" aria-label={modello ?? 'Porsche'}>
       <path d={shape.path} fill="currentColor" />
       {shape.wheels.map(([cx, cy], i) => (
-        <g key={i}>
-          <circle cx={cx} cy={cy} r={shape.r} fill="currentColor" />
-          <circle cx={cx} cy={cy} r={shape.r * 0.47} fill="none" stroke="#ffffff" strokeOpacity="0.3" strokeWidth={Math.max(3, shape.r * 0.18)} />
-        </g>
+        <circle key={i} cx={cx} cy={cy} r={shape.r} fill="currentColor" />
       ))}
     </svg>
   );

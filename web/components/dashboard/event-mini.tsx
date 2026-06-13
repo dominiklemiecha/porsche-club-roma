@@ -15,19 +15,16 @@ function dayMonth(d: string) {
 export function EventMini({ evento }: { evento: DashboardEvento }) {
   const { day, month } = dayMonth(evento.data_evento);
   return (
-    <Link href={`/eventi/${evento.id}`} className="group flex items-center gap-3 rounded-lg p-2 transition hover:bg-ink/[0.03]">
-      <EventThumb immagine={evento.immagine} categoria={evento.categoria} className="h-14 w-20 shrink-0 rounded-lg">
-        <div className="absolute left-1 top-1 rounded bg-paper/95 px-1.5 py-0.5 text-center leading-none shadow-sm">
-          <div className="text-[13px] font-bold text-porsche">{day}</div>
-          <div className="text-[8px] font-semibold tracking-wide text-ink/60">{month}</div>
-        </div>
-      </EventThumb>
+    <Link href={`/eventi/${evento.id}`} className="group flex items-center gap-3 py-3">
+      <EventThumb immagine={evento.immagine} categoria={evento.categoria} className="h-14 w-16 shrink-0 rounded-lg" />
+      <div className="w-8 shrink-0 text-center leading-none">
+        <div className="text-lg font-bold text-porsche">{day}</div>
+        <div className="mt-0.5 text-[10px] font-semibold tracking-wide text-ink/50">{month}</div>
+      </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold">{evento.titolo}</span>
-          <CategoryTag categoria={evento.categoria} />
-        </div>
-        <div className="mt-1 flex items-center gap-3 text-xs text-ink/55">
+        <div className="truncate text-sm font-semibold">{evento.titolo}</div>
+        <div className="mt-1"><CategoryTag categoria={evento.categoria} /></div>
+        <div className="mt-1.5 flex items-center gap-4 text-xs text-ink/55">
           <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {evento.partecipanti} partecipanti</span>
           <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5" /> Base {evento.base} punti</span>
         </div>
