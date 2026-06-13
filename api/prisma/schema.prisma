@@ -10,6 +10,14 @@ datasource db {
 enum Categoria {
   turismo
   pista
+  istituzionale
+}
+
+model Anno {
+  anno    Int     @id
+  attivo  Boolean @default(false)
+
+  @@map("anni")
 }
 
 model Socio {
@@ -27,7 +35,9 @@ model Socio {
 model Evento {
   id              Int             @id @default(autoincrement())
   titolo          String          @db.VarChar(200)
+  anno            Int             @default(0)
   data_evento     DateTime        @db.Date
+  data_fine       DateTime?       @db.Date
   categoria       Categoria
   punteggio_base  Int
   prova_abilita   Boolean         @default(false)
@@ -35,6 +45,7 @@ model Evento {
   created_at      DateTime        @default(now())
   partecipazioni  Partecipazione[]
 
+  @@index([anno])
   @@map("eventi")
 }
 

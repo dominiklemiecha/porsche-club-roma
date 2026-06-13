@@ -5,6 +5,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { AuthModule } from './auth/auth.module';
 import { SociModule } from './soci/soci.module';
 import { EventiModule } from './eventi/eventi.module';
+import { AnniModule } from './anni/anni.module';
 import { ClassificaModule } from './classifica/classifica.module';
 import { PdfModule } from './pdf/pdf.module';
 import { SeedModule } from './seed/seed.module';
@@ -16,6 +17,7 @@ import { SeedModule } from './seed/seed.module';
     AuthModule,
     SociModule,
     EventiModule,
+    AnniModule,
     ClassificaModule,
     PdfModule,
     SeedModule,
