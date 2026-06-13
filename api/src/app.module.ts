@@ -7,6 +7,7 @@ import { SociModule } from './soci/soci.module';
 import { EventiModule } from './eventi/eventi.module';
 import { AnniModule } from './anni/anni.module';
 import { ClassificaModule } from './classifica/classifica.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { PdfModule } from './pdf/pdf.module';
 import { SeedModule } from './seed/seed.module';
 
@@ -19,6 +20,7 @@ import { SeedModule } from './seed/seed.module';
     EventiModule,
     AnniModule,
     ClassificaModule,
+    DashboardModule,
     PdfModule,
     SeedModule,
   ],

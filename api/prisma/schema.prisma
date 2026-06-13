@@ -40,6 +40,7 @@ model Evento {
   data_fine       DateTime?       @db.Date
   categoria       Categoria
   punteggio_base  Int
+  immagine        String?         @db.VarChar(300)
   prova_abilita   Boolean         @default(false)
   scala_prova     Json?
   created_at      DateTime        @default(now())
