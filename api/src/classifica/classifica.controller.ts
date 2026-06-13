@@ -20,10 +20,11 @@ export class ClassificaController {
   constructor(private svc: ClassificaService) {}
   @Get() get(
     @Query('categoria') c: Scope,
+    @Query('anno') anno?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('eventi') eventi?: string,
   ) {
-    return this.svc.build(c, parseDate(from), parseDate(to), parseIds(eventi));
+    return this.svc.build(c, anno ? Number(anno) : undefined, parseDate(from), parseDate(to), parseIds(eventi));
   }
 }

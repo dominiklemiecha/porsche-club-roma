@@ -23,11 +23,12 @@ export class PdfController {
   @Get('classifica') classifica(
     @Query('categoria') c: Scope,
     @Res() res: Response,
+    @Query('anno') anno?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('eventi') eventi?: string,
   ) {
-    return this.cls.stream(c, res, parseDate(from), parseDate(to), parseIds(eventi));
+    return this.cls.stream(c, res, anno ? Number(anno) : undefined, parseDate(from), parseDate(to), parseIds(eventi));
   }
   @Get('evento/:id') evento(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
     return this.ev.stream(id, res);

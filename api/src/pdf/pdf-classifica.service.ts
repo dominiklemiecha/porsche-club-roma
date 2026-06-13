@@ -9,8 +9,8 @@ import { ClassificaService, Scope } from '../classifica/classifica.service';
 export class PdfClassificaService {
   constructor(private classifica: ClassificaService) {}
 
-  async stream(scope: Scope, res: Response, from?: Date, to?: Date, eventoIds?: number[]) {
-    const data = await this.classifica.build(scope, from, to, eventoIds);
+  async stream(scope: Scope, res: Response, anno?: number, from?: Date, to?: Date, eventoIds?: number[]) {
+    const data = await this.classifica.build(scope, anno, from, to, eventoIds);
 
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 30 });
     res.setHeader('Content-Type', 'application/pdf');
@@ -22,7 +22,7 @@ export class PdfClassificaService {
       try { doc.image(logoPath, 30, 25, { width: 60 }); } catch {}
     }
 
-    const titolo = scope === 'generale' ? 'GENERALE' : scope.toUpperCase();
+    const titolo = scope === 'totale' ? 'TOTALE' : scope.toUpperCase();
     doc.fontSize(16).font('Helvetica-Bold').text(`Classifica ${titolo} — Porsche Club Roma`, 100, 35);
     doc.fontSize(9).font('Helvetica').text(`Generato: ${new Date().toLocaleString('it-IT')}`, 100, 55);
 
