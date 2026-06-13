@@ -6,16 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClassificaTable } from '@/components/classifica-table';
 import { api, apiPdf } from '@/lib/api';
+import { useAnni } from '@/lib/anni';
 import type { ClassificaResponse, Evento, Scope } from '@/lib/types';
 
-type FilterMode = 'none' | 'year' | 'month' | 'range';
+type FilterMode = 'none' | 'month' | 'range';
 
-const NOW = new Date();
-const CURRENT_YEAR = NOW.getFullYear();
-const CURRENT_MONTH = `${CURRENT_YEAR}-${String(NOW.getMonth() + 1).padStart(2, '0')}`;
-
-function computeRange(mode: FilterMode, year: string, month: string, from: string, to: string) {
-  if (mode === 'year' && year) return { from: `${year}-01-01`, to: `${year}-12-31` };
+function computeRange(mode: FilterMode, month: string, from: string, to: string) {
   if (mode === 'month' && month) {
     const [y, m] = month.split('-').map(Number);
     const last = new Date(y, m, 0).getDate();
@@ -26,56 +22,36 @@ function computeRange(mode: FilterMode, year: string, month: string, from: strin
 }
 
 export default function ClassificaPage() {
+  const { anni, anno, setAnno } = useAnni();
   const [scope, setScope] = useState<Scope>('turismo');
   const [data, setData] = useState<ClassificaResponse | null>(null);
 
   const [mode, setMode] = useState<FilterMode>('none');
-  const [year, setYear] = useState(String(CURRENT_YEAR));
-  const [month, setMonth] = useState(CURRENT_MONTH);
+  const [month, setMonth] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
-  const [allEventiTurismo, setAllEventiTurismo] = useState<Evento[]>([]);
-  const [allEventiPista, setAllEventiPista] = useState<Evento[]>([]);
+  const [allEventi, setAllEventi] = useState<Evento[]>([]);
   const [selectedEventi, setSelectedEventi] = useState<Set<number>>(new Set());
   const [eventoFilterOn, setEventoFilterOn] = useState(false);
-
   const [pdfScope, setPdfScope] = useState<Scope>('turismo');
 
-  const range = useMemo(() => computeRange(mode, year, month, from, to), [mode, year, month, from, to]);
+  const range = useMemo(() => computeRange(mode, month, from, to), [mode, month, from, to]);
 
-  // Load all events of both categories once (and on relevant changes)
+  // Eventi dell'anno selezionato per il filtro per-evento
   useEffect(() => {
-    Promise.all([
-      api<Evento[]>('/eventi?categoria=turismo'),
-      api<Evento[]>('/eventi?categoria=pista'),
-    ]).then(([t, p]) => {
-      setAllEventiTurismo(t);
-      setAllEventiPista(p);
-    });
-  }, []);
+    if (anno == null) return;
+    api<Evento[]>(`/eventi?anno=${anno}`).then(setAllEventi);
+  }, [anno]);
 
-  // Generale tab is shown only when at least one titolo exists in both categories
-  const generaleAvailable = useMemo(() => {
-    if (allEventiTurismo.length === 0 || allEventiPista.length === 0) return false;
-    const tNames = new Set(allEventiTurismo.map(e => e.titolo.trim().toLowerCase()));
-    return allEventiPista.some(e => tNames.has(e.titolo.trim().toLowerCase()));
-  }, [allEventiTurismo, allEventiPista]);
-
-  // List of events for the filter picker according to current scope
   const eventiForPicker = useMemo(() => {
-    if (scope === 'turismo') return allEventiTurismo;
-    if (scope === 'pista') return allEventiPista;
-    return [...allEventiTurismo, ...allEventiPista].sort(
-      (a, b) => new Date(a.data_evento).getTime() - new Date(b.data_evento).getTime()
-    );
-  }, [scope, allEventiTurismo, allEventiPista]);
+    const cats: string[] = scope === 'totale' ? ['turismo', 'pista'] : [scope];
+    return allEventi
+      .filter(e => cats.includes(e.categoria))
+      .sort((a, b) => new Date(a.data_evento).getTime() - new Date(b.data_evento).getTime());
+  }, [scope, allEventi]);
 
-  // Reset selected events when scope changes
-  useEffect(() => {
-    setSelectedEventi(new Set(eventiForPicker.map(e => e.id)));
-  }, [eventiForPicker]);
-
+  useEffect(() => { setSelectedEventi(new Set(eventiForPicker.map(e => e.id))); }, [eventiForPicker]);
   useEffect(() => { setPdfScope(scope); }, [scope]);
 
   const eventiQuery = useMemo(() => {
@@ -86,18 +62,21 @@ export default function ClassificaPage() {
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams({ categoria: scope });
+    if (anno != null) p.set('anno', String(anno));
     if (range.from) p.set('from', range.from);
     if (range.to) p.set('to', range.to);
     if (eventiQuery) p.set('eventi', eventiQuery);
     return p.toString();
-  }, [scope, range, eventiQuery]);
+  }, [scope, anno, range, eventiQuery]);
 
   useEffect(() => {
+    if (anno == null) return;
     api<ClassificaResponse>(`/classifica?${queryString}`).then(setData);
-  }, [queryString]);
+  }, [queryString, anno]);
 
   async function pdf() {
     const p = new URLSearchParams({ categoria: pdfScope });
+    if (anno != null) p.set('anno', String(anno));
     if (range.from) p.set('from', range.from);
     if (range.to) p.set('to', range.to);
     if (eventiQuery) p.set('eventi', eventiQuery);
@@ -105,7 +84,7 @@ export default function ClassificaPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `classifica-${pdfScope}.pdf`;
+    a.download = `classifica-${pdfScope}-${anno}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -122,13 +101,23 @@ export default function ClassificaPage() {
         <h1 className="text-xl font-semibold">Classifica</h1>
         <div className="flex flex-wrap items-center gap-2">
           <select
+            value={anno ?? ''}
+            onChange={e => setAnno(Number(e.target.value))}
+            className="h-9 rounded-md border border-ink/30 bg-paper px-3 text-sm focus:outline-none focus:ring-2 focus:ring-porsche"
+          >
+            {anni.map(a => (
+              <option key={a.anno} value={a.anno}>{a.anno}{a.attivo ? ' (attivo)' : ''}</option>
+            ))}
+          </select>
+          <select
             value={pdfScope}
             onChange={e => setPdfScope(e.target.value as Scope)}
             className="h-9 rounded-md border border-ink/30 bg-paper px-3 text-sm focus:outline-none focus:ring-2 focus:ring-porsche"
           >
             <option value="turismo">Turismo</option>
             <option value="pista">Pista</option>
-            {generaleAvailable && <option value="generale">Generale</option>}
+            <option value="totale">Totale</option>
+            <option value="istituzionale">Istituzionale</option>
           </select>
           <Button variant="outline" onClick={pdf}>Scarica PDF</Button>
         </div>
@@ -144,18 +133,11 @@ export default function ClassificaPage() {
               className="h-9 rounded-md border border-ink/30 bg-paper px-3 text-sm focus:outline-none focus:ring-2 focus:ring-porsche"
             >
               <option value="none">Nessuno</option>
-              <option value="year">Anno</option>
               <option value="month">Mese</option>
               <option value="range">Intervallo</option>
             </select>
           </div>
 
-          {mode === 'year' && (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="year">Anno</Label>
-              <Input id="year" type="number" min="2000" max="2100" value={year} onChange={e => setYear(e.target.value)} className="sm:w-32" />
-            </div>
-          )}
           {mode === 'month' && (
             <div className="flex flex-col gap-1">
               <Label htmlFor="month">Mese</Label>
@@ -213,13 +195,13 @@ export default function ClassificaPage() {
         <TabsList>
           <TabsTrigger value="turismo">Turismo</TabsTrigger>
           <TabsTrigger value="pista">Pista</TabsTrigger>
-          {generaleAvailable && <TabsTrigger value="generale">Generale</TabsTrigger>}
+          <TabsTrigger value="totale">Totale</TabsTrigger>
+          <TabsTrigger value="istituzionale">Istituzionale</TabsTrigger>
         </TabsList>
         <TabsContent value="turismo">{data && scope === 'turismo' && <ClassificaTable data={data} />}</TabsContent>
         <TabsContent value="pista">{data && scope === 'pista' && <ClassificaTable data={data} />}</TabsContent>
-        {generaleAvailable && (
-          <TabsContent value="generale">{data && scope === 'generale' && <ClassificaTable data={data} />}</TabsContent>
-        )}
+        <TabsContent value="totale">{data && scope === 'totale' && <ClassificaTable data={data} />}</TabsContent>
+        <TabsContent value="istituzionale">{data && scope === 'istituzionale' && <ClassificaTable data={data} />}</TabsContent>
       </Tabs>
     </div>
   );

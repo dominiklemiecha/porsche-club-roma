@@ -61,6 +61,14 @@ export function PartecipazioniDialog({ open, onOpenChange, evento, current, onSa
     } catch (e: any) { setErr(e.message); }
   }
 
+  function puntiPreview(pos: number | null): number {
+    const base = evento.punteggio_base;
+    if (pos == null || !evento.scala_prova) return base;
+    const idx = pos - 1;
+    if (idx < 0 || idx >= evento.scala_prova.length) return base;
+    return base + evento.scala_prova[idx];
+  }
+
   const visible = soci.filter(s =>
     !filter
     || s.cognome.toLowerCase().includes(filter.toLowerCase())
@@ -104,6 +112,10 @@ export function PartecipazioniDialog({ open, onOpenChange, evento, current, onSa
                   <div key={s.socio_id} className="flex items-center gap-2 border-b px-3 py-2 last:border-0">
                     <span className="flex-1">{socio?.cognome} {socio?.nome}</span>
                     <Input className="w-20" type="number" min="1" value={s.posizione_prova ?? ''} onChange={e => setPos(s.socio_id, e.target.value)} />
+                    <span className="w-16 text-right text-sm">
+                      <span className="text-neutral-500">pt </span>
+                      <b>{puntiPreview(s.posizione_prova)}</b>
+                    </span>
                   </div>
                 );
               })}

@@ -7,11 +7,13 @@ import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
 import type { Categoria, Evento } from '@/lib/types';
 
-interface Props { open: boolean; onOpenChange: (b: boolean) => void; evento?: Evento | null; onSaved: () => void; }
+interface Props { open: boolean; onOpenChange: (b: boolean) => void; evento?: Evento | null; anno: number | null; onSaved: () => void; }
 
-export function EventoFormDialog({ open, onOpenChange, evento, onSaved }: Props) {
+export function EventoFormDialog({ open, onOpenChange, evento, anno, onSaved }: Props) {
   const [titolo, setTitolo] = useState('');
   const [data, setData] = useState('');
+  const [multi, setMulti] = useState(false);
+  const [dataFine, setDataFine] = useState('');
   const [categoria, setCategoria] = useState<Categoria>('turismo');
   const [base, setBase] = useState('10');
   const [prova, setProva] = useState(false);
@@ -23,6 +25,8 @@ export function EventoFormDialog({ open, onOpenChange, evento, onSaved }: Props)
     if (open) {
       setTitolo(evento?.titolo ?? '');
       setData(evento?.data_evento?.slice(0,10) ?? '');
+      setMulti(!!evento?.data_fine);
+      setDataFine(evento?.data_fine?.slice(0,10) ?? '');
       setCategoria(evento?.categoria ?? 'turismo');
       setBase(String(evento?.punteggio_base ?? 10));
       setProva(evento?.prova_abilita ?? false);
@@ -40,7 +44,10 @@ export function EventoFormDialog({ open, onOpenChange, evento, onSaved }: Props)
     e.preventDefault();
     try {
       const body = JSON.stringify({
-        titolo, data_evento: data, categoria,
+        titolo, data_evento: data,
+        data_fine: multi && dataFine ? dataFine : undefined,
+        categoria,
+        anno: editing ? evento!.anno : (anno ?? undefined),
         punteggio_base: Number(base), prova_abilita: prova,
         scala_prova: prova ? scala : undefined,
       });
@@ -57,15 +64,23 @@ export function EventoFormDialog({ open, onOpenChange, evento, onSaved }: Props)
         <form onSubmit={save} className="space-y-3">
           <div><Label>Titolo</Label><Input value={titolo} onChange={e => setTitolo(e.target.value)} required /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Data</Label><Input type="date" value={data} onChange={e => setData(e.target.value)} required /></div>
+            <div><Label>Data {multi ? 'inizio' : ''}</Label><Input type="date" value={data} onChange={e => setData(e.target.value)} required /></div>
             <div>
               <Label>Categoria</Label>
               <select className="h-9 w-full rounded-md border border-neutral-300 px-3 text-sm" value={categoria} onChange={e => setCategoria(e.target.value as Categoria)}>
                 <option value="turismo">Turismo</option>
                 <option value="pista">Pista</option>
+                <option value="istituzionale">Istituzionale</option>
               </select>
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={multi} onChange={e => setMulti(e.target.checked)} />
+            Più giorni
+          </label>
+          {multi && (
+            <div><Label>Data fine</Label><Input type="date" value={dataFine} min={data} onChange={e => setDataFine(e.target.value)} required /></div>
+          )}
           <div><Label>Punteggio base</Label><Input type="number" min="0" value={base} onChange={e => setBase(e.target.value)} required /></div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={prova} onChange={e => setProva(e.target.checked)} />

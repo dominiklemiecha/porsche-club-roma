@@ -1,12 +1,16 @@
-export type Categoria = 'turismo' | 'pista';
-export type Scope = Categoria | 'generale';
+export type Categoria = 'turismo' | 'pista' | 'istituzionale';
+export type Scope = 'turismo' | 'pista' | 'istituzionale' | 'totale';
+
+export interface Anno { anno: number; attivo: boolean; }
 
 export interface Socio { id: number; numero_tessera: number; nome: string; cognome: string; modello_auto?: string | null; }
 
 export interface Evento {
   id: number;
   titolo: string;
+  anno: number;
   data_evento: string;
+  data_fine?: string | null;
   categoria: Categoria;
   punteggio_base: number;
   prova_abilita: boolean;
