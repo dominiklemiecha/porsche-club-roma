@@ -13,9 +13,41 @@ export interface Evento {
   data_fine?: string | null;
   categoria: Categoria;
   punteggio_base: number;
+  immagine?: string | null;
   prova_abilita: boolean;
   scala_prova: number[] | null;
   _count?: { partecipazioni: number };
+}
+
+export interface DashboardEvento {
+  id: number;
+  titolo: string;
+  data_evento: string;
+  data_fine?: string | null;
+  categoria: Categoria;
+  immagine?: string | null;
+  base: number;
+  partecipanti: number;
+}
+
+export interface DashboardResponse {
+  anno: number;
+  stats: {
+    soci: number;
+    eventi: number;
+    puntiAssegnati: number;
+    leader: { nome: string; cognome: string; punti: number } | null;
+  };
+  podio: {
+    posizione: number;
+    nome: string;
+    cognome: string;
+    numero_tessera: number;
+    modello_auto?: string | null;
+    punti: number;
+  }[];
+  prossimiEventi: DashboardEvento[];
+  ultimoEvento: DashboardEvento | null;
 }
 
 export interface Partecipazione {

@@ -19,7 +19,7 @@ export default function LoginPage() {
     setErr(null); setLoading(true);
     try {
       await api('/auth/login', { method: 'POST', body: JSON.stringify({ username: u, password: p }) });
-      r.push('/soci');
+      r.push('/dashboard');
     } catch { setErr('Credenziali non valide'); }
     finally { setLoading(false); }
   }

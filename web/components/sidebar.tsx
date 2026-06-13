@@ -1,13 +1,14 @@
 'use client';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Users, Calendar, Trophy, LogOut, Menu, X } from 'lucide-react';
+import { LayoutGrid, Users, Calendar, Trophy, LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { Brand } from '@/components/layout/brand';
 
 const links = [
+  { href: '/dashboard',  label: 'Dashboard',  icon: LayoutGrid },
   { href: '/soci',       label: 'Soci',       icon: Users },
   { href: '/eventi',     label: 'Eventi',     icon: Calendar },
   { href: '/classifica', label: 'Classifica', icon: Trophy },
@@ -25,60 +26,62 @@ export function Sidebar() {
     router.push('/login');
   }
 
-  const Brand = (
-    <div className="flex items-center justify-center px-4 py-5 border-b border-ink/10">
-      <Image src="/porsche-logo.png" alt="Porsche Club Roma" width={48} height={48} priority />
-    </div>
-  );
-
   const Nav = (
-    <nav className="flex-1 px-2 py-3 space-y-1 overflow-y-auto">
-      {links.map(l => (
-        <Link key={l.href} href={l.href}
-          className={cn(
-            'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition hover:bg-cream/40',
-            path?.startsWith(l.href) && 'bg-porsche text-paper font-medium hover:bg-porsche'
-          )}>
-          <l.icon className="h-4 w-4" /> {l.label}
-        </Link>
-      ))}
+    <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      {links.map(l => {
+        const active = path?.startsWith(l.href);
+        return (
+          <Link key={l.href} href={l.href}
+            className={cn(
+              'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition',
+              active ? 'bg-porsche/[0.06] font-semibold text-porsche' : 'text-ink/70 hover:bg-ink/[0.04] hover:text-ink',
+            )}>
+            {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-porsche" />}
+            <l.icon className={cn('h-[18px] w-[18px] transition', active ? 'text-porsche' : 'text-ink/50 group-hover:text-ink')} />
+            {l.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 
   const Logout = (
-    <button onClick={logout} className="m-3 flex items-center gap-2 rounded-md px-3 py-2 text-sm transition hover:bg-cream/40">
-      <LogOut className="h-4 w-4" /> Logout
+    <button onClick={logout}
+      className="m-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-ink/60 transition hover:bg-ink/[0.04] hover:text-ink">
+      <LogOut className="h-[18px] w-[18px]" /> Logout
     </button>
   );
 
   return (
     <>
       {/* Mobile top bar */}
-      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-2 bg-paper text-ink px-3 py-2 border-b border-ink/10 shadow-sm">
-        <button onClick={() => setOpen(true)} aria-label="Apri menu" className="p-2 rounded-md hover:bg-cream/40">
+      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-line bg-paper px-3 py-2.5">
+        <button onClick={() => setOpen(true)} aria-label="Apri menu" className="rounded-md p-2 hover:bg-ink/[0.04]">
           <Menu className="h-5 w-5" />
         </button>
-        <Image src="/porsche-logo.png" alt="" width={28} height={28} />
+        <Brand compact />
         <span aria-hidden className="w-9" />
       </header>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex h-screen w-56 flex-col sticky top-0 shrink-0 border-r border-ink/10 bg-paper text-ink">
-        {Brand}
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-paper lg:flex">
+        <div className="px-5 py-5">
+          <Brand />
+        </div>
         {Nav}
         {Logout}
       </aside>
 
       {/* Mobile drawer */}
       {open && (
-        <div className="lg:hidden fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-ink/50" onClick={() => setOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-64 flex flex-col bg-paper text-ink border-r border-ink/10 shadow-xl">
+          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-line bg-paper shadow-xl">
             <button onClick={() => setOpen(false)} aria-label="Chiudi menu"
-              className="absolute right-2 top-2 p-2 rounded-md hover:bg-cream/40">
+              className="absolute right-2 top-2 rounded-md p-2 hover:bg-ink/[0.04]">
               <X className="h-5 w-5" />
             </button>
-            {Brand}
+            <div className="px-5 py-5"><Brand /></div>
             {Nav}
             {Logout}
           </aside>
