@@ -1,4 +1,4 @@
-export interface SocioLite { id: number; numero_tessera: number; nome: string; cognome: string; }
+export interface SocioLite { id: number; numero_tessera: number; nome: string; cognome: string; modello_auto?: string | null; }
 
 export interface PartecipazioneLite {
   socio_id: number;

@@ -61,7 +61,7 @@ export interface ClassificaResponse {
   eventi: { id: string; titolo: string; data_evento: string }[];
   righe: {
     posizione: number;
-    socio: Socio;
+    socio: Socio & { modello_auto?: string | null };
     totale: number;
     punti_per_evento: Record<string, number>;
   }[];

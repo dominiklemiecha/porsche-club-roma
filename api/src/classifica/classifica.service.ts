@@ -45,6 +45,7 @@ export class ClassificaService {
         numero_tessera: p.socio.numero_tessera,
         nome: p.socio.nome,
         cognome: p.socio.cognome,
+        modello_auto: p.socio.modello_auto,
       },
     }));
 
