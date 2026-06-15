@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { api } from '@/lib/api';
+import { api, apiUpload } from '@/lib/api';
+import { imageUrl } from '@/lib/images';
 import type { Categoria, Evento } from '@/lib/types';
 
 interface Props { open: boolean; onOpenChange: (b: boolean) => void; evento?: Evento | null; anno: number | null; onSaved: () => void; }
@@ -18,6 +19,8 @@ export function EventoFormDialog({ open, onOpenChange, evento, anno, onSaved }: 
   const [base, setBase] = useState('10');
   const [prova, setProva] = useState(false);
   const [scala, setScala] = useState<number[]>([30,25,20,15,10,5]);
+  const [imgFile, setImgFile] = useState<File | null>(null);
+  const [imgPreview, setImgPreview] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const editing = !!evento;
 
@@ -31,9 +34,18 @@ export function EventoFormDialog({ open, onOpenChange, evento, anno, onSaved }: 
       setBase(String(evento?.punteggio_base ?? 10));
       setProva(evento?.prova_abilita ?? false);
       setScala(evento?.scala_prova ?? [30,25,20,15,10,5]);
+      setImgFile(null);
+      setImgPreview(evento?.immagine ? imageUrl(evento.immagine) : null);
       setErr(null);
     }
   }, [open, evento]);
+
+  function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setImgFile(f);
+    setImgPreview(URL.createObjectURL(f));
+  }
 
   function setScalaAt(i: number, v: string) {
     const n = Number(v); if (!Number.isFinite(n)) return;
@@ -51,8 +63,10 @@ export function EventoFormDialog({ open, onOpenChange, evento, anno, onSaved }: 
         punteggio_base: Number(base), prova_abilita: prova,
         scala_prova: prova ? scala : undefined,
       });
-      if (editing) await api(`/eventi/${evento!.id}`, { method: 'PATCH', body });
-      else         await api('/eventi',                { method: 'POST',  body });
+      const saved = editing
+        ? await api<Evento>(`/eventi/${evento!.id}`, { method: 'PATCH', body })
+        : await api<Evento>('/eventi',               { method: 'POST',  body });
+      if (imgFile) await apiUpload(`/eventi/${saved.id}/immagine`, imgFile);
       onSaved(); onOpenChange(false);
     } catch (e: any) { setErr(e.message); }
   }
@@ -72,6 +86,17 @@ export function EventoFormDialog({ open, onOpenChange, evento, anno, onSaved }: 
                 <option value="pista">Pista</option>
                 <option value="istituzionale">Istituzionale</option>
               </select>
+            </div>
+          </div>
+          <div>
+            <Label>Immagine</Label>
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md border border-line bg-canvas">
+                {imgPreview && /* eslint-disable-next-line @next/next/no-img-element */ (
+                  <img src={imgPreview} alt="" className="h-full w-full object-cover" />
+                )}
+              </div>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickImage} className="text-sm" />
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm">

@@ -1,6 +1,10 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { randomUUID } from 'crypto';
 import { Categoria } from '@prisma/client';
+import { UPLOADS_DIR } from '../uploads.config';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { EventiService } from './eventi.service';
 import { PartecipazioniService } from './partecipazioni.service';
@@ -28,6 +32,20 @@ export class EventiController {
   setPart(@Param('id', ParseIntPipe) id: number, @Body() dto: SetPartecipantiDto) {
     return this.parts.setForEvento(id, dto);
   }
+  @Post(':id/immagine')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: UPLOADS_DIR,
+      filename: (_req, file, cb) => cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`),
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => cb(null, /^image\/(jpe?g|png|webp)$/.test(file.mimetype)),
+  }))
+  uploadImmagine(@Param('id', ParseIntPipe) id: number, @UploadedFile() file?: { filename: string }) {
+    if (!file?.filename) throw new BadRequestException('Immagine non valida (usa JPG, PNG o WEBP, max 5MB)');
+    return this.svc.setImmagine(id, `/uploads/${file.filename}`);
+  }
+
   @Post(':id/partecipazioni/import-xlsx')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
   importXlsx(@Param('id', ParseIntPipe) id: number, @UploadedFile() file?: { buffer: Buffer }) {

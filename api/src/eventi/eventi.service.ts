@@ -124,4 +124,11 @@ export class EventiService {
     await this.prisma.evento.delete({ where: { id } });
     return { ok: true };
   }
+
+  async setImmagine(id: number, path: string) {
+    const ex = await this.prisma.evento.findUnique({ where: { id } });
+    if (!ex) throw new NotFoundException();
+    await this.anni.assertAttivo(ex.anno);
+    return this.prisma.evento.update({ where: { id }, data: { immagine: path } });
+  }
 }

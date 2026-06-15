@@ -24,8 +24,10 @@ services:
       ADMIN_PASS:   ${ADMIN_PASS}
       CORS_ORIGIN:  ${CORS_ORIGIN}
       NODE_ENV:     production
+      UPLOADS_DIR:  /app/uploads
     volumes:
       - "./elenco_soci_2026-06-08.xlsx:/seed/soci.xlsx:ro"
+      - "./data/uploads:/app/uploads"
     ports:
       - "3101:3001"
 
