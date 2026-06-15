@@ -7,7 +7,6 @@ import { EventoFormDialog } from '@/components/evento-form-dialog';
 import { PartecipazioniDialog } from '@/components/partecipazioni-dialog';
 import { api, apiUpload } from '@/lib/api';
 import { useAnni } from '@/lib/anni';
-import { sommaBasePerCategoria } from '@/lib/calendario';
 import { cn } from '@/lib/utils';
 import type { Categoria, Evento, Partecipazione, Socio } from '@/lib/types';
 
@@ -72,9 +71,6 @@ export default function EventiPage() {
       (!q || e.titolo.toLowerCase().includes(q) || new Date(e.data_evento).toLocaleDateString('it-IT').includes(q))
     );
   }, [rows, search, filtro]);
-
-  const contatore = useMemo(() => sommaBasePerCategoria(rows), [rows]);
-  const sbilanciato = contatore.turismo !== contatore.pista;
 
   return (
     <div>
@@ -146,18 +142,6 @@ export default function EventiPage() {
       ) : (
         <div className="py-16 text-center text-ink/45">Nessun evento</div>
       )}
-
-      {/* Contatore */}
-      <div className="mt-6 flex flex-wrap gap-3 text-sm">
-        <span className="rounded-md border border-line bg-paper px-3 py-1.5 shadow-card">Turismo (base a calendario): <b>{contatore.turismo}</b></span>
-        <span className="rounded-md border border-line bg-paper px-3 py-1.5 shadow-card">Pista (base a calendario): <b>{contatore.pista}</b></span>
-        <span className="rounded-md border border-line bg-paper px-3 py-1.5 shadow-card">Istituzionale: <b>{contatore.istituzionale}</b></span>
-        {sbilanciato && (
-          <span className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-amber-800 shadow-card">
-            ⚠ Turismo e Pista non equiparati (Δ {Math.abs(contatore.turismo - contatore.pista)})
-          </span>
-        )}
-      </div>
 
       <EventoFormDialog open={open} onOpenChange={setOpen} evento={editing} anno={anno} onSaved={load} />
       {partEvento && (
