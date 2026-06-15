@@ -8,6 +8,7 @@ import { EventiModule } from './eventi/eventi.module';
 import { AnniModule } from './anni/anni.module';
 import { ClassificaModule } from './classifica/classifica.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ImpostazioniModule } from './impostazioni/impostazioni.module';
 import { PdfModule } from './pdf/pdf.module';
 import { SeedModule } from './seed/seed.module';
 
@@ -21,6 +22,7 @@ import { SeedModule } from './seed/seed.module';
     AnniModule,
     ClassificaModule,
     DashboardModule,
+    ImpostazioniModule,
     PdfModule,
     SeedModule,
   ],

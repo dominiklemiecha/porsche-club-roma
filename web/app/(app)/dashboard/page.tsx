@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Users, CalendarDays, Trophy, Star, ArrowRight, ChevronRight } from 'lucide-react';
-import { api } from '@/lib/api';
+import { Users, CalendarDays, Trophy, Star, ArrowRight, ChevronRight, ImagePlus } from 'lucide-react';
+import { api, apiUpload } from '@/lib/api';
+import { imageUrl } from '@/lib/images';
 import type { DashboardResponse } from '@/lib/types';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { Podium } from '@/components/dashboard/podium';
@@ -16,7 +17,18 @@ function dateLong(d: string) {
 
 export default function DashboardPage() {
   const [d, setD] = useState<DashboardResponse | null>(null);
+  const [hero, setHero] = useState<string | null>(null);
+  const heroFileRef = useRef<HTMLInputElement>(null);
   useEffect(() => { api<DashboardResponse>('/dashboard').then(setD); }, []);
+  function loadHero() { api<{ hero_immagine: string | null }>('/impostazioni').then(r => setHero(r.hero_immagine)); }
+  useEffect(() => { loadHero(); }, []);
+  async function onHeroFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]; e.target.value = '';
+    if (!f) return;
+    try { await apiUpload('/impostazioni/hero', f); loadHero(); }
+    catch (err: any) { alert(err.message); }
+  }
+  const heroSrc = imageUrl(hero) ?? '/hero-track.jpg';
 
   const anno = d?.anno ?? new Date().getFullYear();
   const minor = d?.podio.filter(r => r.posizione >= 4 && r.posizione <= 7) ?? [];
@@ -26,12 +38,19 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* HERO */}
       <section className="animate-rise relative h-44 overflow-hidden rounded-xl2 bg-ink text-paper shadow-card sm:h-52">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/hero-track.jpg')" }} />
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${heroSrc}')` }} />
         <div className="absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/35 to-transparent" />
         <div className="absolute bottom-0 left-0 p-6 sm:p-8">
           <h1 className="text-3xl font-bold tracking-tight drop-shadow sm:text-4xl">Porsche Club Roma</h1>
           <p className="mt-1 text-base text-paper/85 sm:text-lg">Campionato Sociale {anno}</p>
         </div>
+        <input ref={heroFileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onHeroFile} />
+        <button
+          onClick={() => heroFileRef.current?.click()}
+          className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-md bg-black/40 px-3 py-1.5 text-xs font-medium text-paper backdrop-blur-sm transition hover:bg-black/60"
+        >
+          <ImagePlus className="h-4 w-4" /> Cambia immagine
+        </button>
       </section>
 
       {/* STATS */}

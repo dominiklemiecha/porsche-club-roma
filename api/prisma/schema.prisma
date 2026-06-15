@@ -20,6 +20,13 @@ model Anno {
   @@map("anni")
 }
 
+model Setting {
+  chiave  String  @id @db.VarChar(60)
+  valore  String  @db.VarChar(400)
+
+  @@map("impostazioni")
+}
+
 model Socio {
   id              Int             @id @default(autoincrement())
   numero_tessera  Int             @unique
