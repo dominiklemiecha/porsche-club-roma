@@ -7,9 +7,14 @@ import { UpdateSocioDto } from './dto/update-socio.dto';
 export class SociService {
   constructor(private prisma: PrismaService) {}
 
+  private readonly listArgs = {
+    orderBy: [{ cognome: 'asc' as const }, { nome: 'asc' as const }],
+    include: { _count: { select: { partecipazioni: true } } },
+  };
+
   list(q?: string) {
     if (!q) {
-      return this.prisma.socio.findMany({ orderBy: [{ cognome: 'asc' }, { nome: 'asc' }] });
+      return this.prisma.socio.findMany(this.listArgs);
     }
     const tessera = Number.isFinite(+q) ? +q : undefined;
     const or: any[] = [
@@ -17,10 +22,7 @@ export class SociService {
       { nome:    { contains: q, mode: 'insensitive' } },
     ];
     if (tessera !== undefined) or.push({ numero_tessera: tessera });
-    return this.prisma.socio.findMany({
-      where: { OR: or },
-      orderBy: [{ cognome: 'asc' }, { nome: 'asc' }],
-    });
+    return this.prisma.socio.findMany({ where: { OR: or }, ...this.listArgs });
   }
 
   async create(dto: CreateSocioDto) {

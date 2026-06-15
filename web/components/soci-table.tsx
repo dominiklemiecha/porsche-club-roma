@@ -1,122 +1,99 @@
 'use client';
-import { useMemo, useState } from 'react';
-import { Table, Tbody, Td, Th, Thead, Tr } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { CarSilhouette } from '@/components/car-silhouette';
 import { cn } from '@/lib/utils';
 import type { Socio } from '@/lib/types';
 
 interface Props {
   rows: Socio[];
+  maxPart: number;
   onEdit: (s: Socio) => void;
   onDelete: (s: Socio) => void;
 }
 
-type SortKey = 'numero_tessera' | 'cognome' | 'nome' | 'modello_auto';
-type SortDir = 'asc' | 'desc' | null;
-
-const COLS: { key: SortKey; label: string; numeric?: boolean }[] = [
-  { key: 'numero_tessera', label: 'Tessera', numeric: true },
-  { key: 'cognome', label: 'Cognome' },
-  { key: 'nome', label: 'Nome' },
-  { key: 'modello_auto', label: 'Modello auto' },
-];
-
-export function SociTable({ rows, onEdit, onDelete }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey !== key) { setSortKey(key); setSortDir('asc'); return; }
-    if (sortDir === 'asc') { setSortDir('desc'); return; }
-    if (sortDir === 'desc') { setSortKey(null); setSortDir(null); return; }
-    setSortDir('asc');
-  }
-
-  const sorted = useMemo(() => {
-    if (!sortKey || !sortDir) return rows;
-    const numeric = COLS.find(c => c.key === sortKey)?.numeric;
-    const mul = sortDir === 'asc' ? 1 : -1;
-    return [...rows].sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
-      const aNull = av === null || av === undefined || av === '';
-      const bNull = bv === null || bv === undefined || bv === '';
-      if (aNull && bNull) return 0;
-      if (aNull) return 1;
-      if (bNull) return -1;
-      if (numeric) return (Number(av) - Number(bv)) * mul;
-      return String(av).localeCompare(String(bv), 'it', { sensitivity: 'base' }) * mul;
-    });
-  }, [rows, sortKey, sortDir]);
-
-  function indicator(key: SortKey) {
-    if (sortKey !== key) return <span className="ml-1 opacity-30">↕</span>;
-    return <span className="ml-1">{sortDir === 'asc' ? '▲' : '▼'}</span>;
-  }
-
-  const sortControls = (
-    <div className="sm:hidden mb-3 flex flex-wrap items-center gap-2 text-xs">
-      <span className="text-ink/60">Ordina:</span>
-      {COLS.map(c => (
-        <button key={c.key} type="button" onClick={() => toggleSort(c.key)}
-          className={cn('rounded-md border border-ink/15 px-2 py-1', sortKey === c.key && 'bg-ink text-paper border-ink')}>
-          {c.label}{sortKey === c.key && (sortDir === 'asc' ? ' ▲' : ' ▼')}
-        </button>
-      ))}
+function RowMenu({ s, onEdit, onDelete }: { s: Socio; onEdit: (s: Socio) => void; onDelete: (s: Socio) => void }) {
+  const [open, setOpen] = useState(false);
+  const item = 'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-ink/[0.04]';
+  return (
+    <div className="relative inline-block">
+      <button onClick={() => setOpen(v => !v)} aria-label="Azioni" className="grid h-8 w-8 place-items-center rounded-md text-ink/50 hover:bg-ink/[0.06] hover:text-ink">
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open && (
+        <>
+          <button className="fixed inset-0 z-10 cursor-default" aria-hidden onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg border border-line bg-paper py-1 shadow-card-hover">
+            <button className={item} onClick={() => { setOpen(false); onEdit(s); }}><Pencil className="h-4 w-4" /> Modifica</button>
+            <button className={`${item} text-porsche`} onClick={() => { setOpen(false); onDelete(s); }}><Trash2 className="h-4 w-4" /> Elimina</button>
+          </div>
+        </>
+      )}
     </div>
   );
+}
 
+function Bar({ value, max }: { value: number; max: number }) {
+  const pct = Math.max(4, Math.round((value / Math.max(1, max)) * 100));
+  return (
+    <div>
+      <div className="text-sm font-semibold tabular-nums">{value}</div>
+      <div className="mt-1 h-1 w-24 overflow-hidden rounded-full bg-line">
+        <div className="h-full rounded-full bg-porsche" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+export function SociTable({ rows, maxPart, onEdit, onDelete }: Props) {
   return (
     <>
-      {sortControls}
-      <div className="sm:hidden space-y-2">
-        {sorted.map(s => (
-          <div key={s.id} className="rounded-md border border-ink/10 bg-paper p-3 shadow-sm">
-            <div className="flex items-baseline justify-between gap-2">
-              <div className="font-medium">{s.cognome} {s.nome}</div>
-              <div className="text-xs text-ink/60">#{s.numero_tessera}</div>
+      {/* Mobile */}
+      <div className="space-y-2 sm:hidden">
+        {rows.map(s => (
+          <div key={s.id} className="card flex items-center gap-3 p-3">
+            <CarSilhouette modello={s.modello_auto} className="h-7 w-12 shrink-0 text-ink" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-semibold">{s.nome} {s.cognome}</div>
+              <div className="truncate text-xs text-ink/60">#{s.numero_tessera} · {s.modello_auto ?? '—'}</div>
+              <div className="mt-1 text-xs text-ink/60">{s._count?.partecipazioni ?? 0} partecipazioni</div>
             </div>
-            <div className="mt-1 text-sm text-ink/70">{s.modello_auto ?? '—'}</div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button size="sm" variant="outline" onClick={() => onEdit(s)}>Modifica</Button>
-              <Button size="sm" variant="destructive" onClick={() => onDelete(s)}>Elimina</Button>
-            </div>
+            <RowMenu s={s} onEdit={onEdit} onDelete={onDelete} />
           </div>
         ))}
-        {sorted.length === 0 && <div className="text-center text-ink/50 py-6">Nessun socio</div>}
+        {rows.length === 0 && <div className="py-6 text-center text-ink/50">Nessun socio</div>}
       </div>
-      <div className="hidden sm:block">
-      <Table>
-      <Thead>
-        <Tr>
-          {COLS.map(c => (
-            <Th key={c.key}>
-              <button type="button" onClick={() => toggleSort(c.key)} className="flex items-center font-medium hover:opacity-80">
-                {c.label}{indicator(c.key)}
-              </button>
-            </Th>
-          ))}
-          <Th></Th>
-        </Tr>
-      </Thead>
-      <Tbody>
-        {sorted.map(s => (
-          <Tr key={s.id}>
-            <Td>{s.numero_tessera}</Td>
-            <Td>{s.cognome}</Td>
-            <Td>{s.nome}</Td>
-            <Td className="text-ink/70">{s.modello_auto ?? '—'}</Td>
-            <Td>
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button size="sm" variant="outline" onClick={() => onEdit(s)}>Modifica</Button>
-                <Button size="sm" variant="destructive" onClick={() => onDelete(s)}>Elimina</Button>
-              </div>
-            </Td>
-          </Tr>
-        ))}
-        {sorted.length === 0 && <Tr><Td colSpan={5} className="text-center text-ink/50">Nessun socio</Td></Tr>}
-      </Tbody>
-    </Table>
+
+      {/* Desktop */}
+      <div className="card hidden overflow-hidden sm:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-ink/45">
+              <th className="px-5 py-3 font-semibold">Tessera</th>
+              <th className="px-5 py-3 font-semibold">Socio</th>
+              <th className="px-5 py-3 font-semibold">Modello auto</th>
+              <th className="px-5 py-3 font-semibold">Partecipazioni</th>
+              <th className="px-5 py-3 text-right font-semibold">Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(s => (
+              <tr key={s.id} className="border-b border-line/60 last:border-0 hover:bg-ink/[0.02]">
+                <td className="px-5 py-3 text-ink/70">{s.numero_tessera}</td>
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <CarSilhouette modello={s.modello_auto} className="h-6 w-11 shrink-0 text-ink" />
+                    <span className="font-semibold">{s.nome} {s.cognome}</span>
+                  </div>
+                </td>
+                <td className="px-5 py-3 text-ink/70">{s.modello_auto ?? '—'}</td>
+                <td className="px-5 py-3"><Bar value={s._count?.partecipazioni ?? 0} max={maxPart} /></td>
+                <td className="px-5 py-3 text-right"><RowMenu s={s} onEdit={onEdit} onDelete={onDelete} /></td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={5} className="px-5 py-8 text-center text-ink/50">Nessun socio</td></tr>}
+          </tbody>
+        </table>
       </div>
     </>
   );
