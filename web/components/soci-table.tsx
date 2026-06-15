@@ -52,7 +52,7 @@ export function SociTable({ rows, maxPart, onEdit, onDelete }: Props) {
       <div className="space-y-2 sm:hidden">
         {rows.map(s => (
           <div key={s.id} className="card flex items-center gap-3 p-3">
-            <CarSilhouette modello={s.modello_auto} className="h-7 w-12 shrink-0 text-ink" />
+            <CarSilhouette modello={s.modello_auto} className="h-7 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="truncate font-semibold">{s.nome} {s.cognome}</div>
               <div className="truncate text-xs text-ink/60">#{s.numero_tessera} · {s.modello_auto ?? '—'}</div>
@@ -82,7 +82,7 @@ export function SociTable({ rows, maxPart, onEdit, onDelete }: Props) {
                 <td className="px-5 py-3 text-ink/70">{s.numero_tessera}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <CarSilhouette modello={s.modello_auto} className="h-6 w-11 shrink-0 text-ink" />
+                    <CarSilhouette modello={s.modello_auto} className="h-6 shrink-0" />
                     <span className="font-semibold">{s.nome} {s.cognome}</span>
                   </div>
                 </td>

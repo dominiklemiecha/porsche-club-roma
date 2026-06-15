@@ -23,7 +23,7 @@ function Cell({ row, lead, carded }: { row?: PodiumRow; lead?: boolean; carded?:
       </div>
       <CarSilhouette
         modello={row.modello_auto}
-        className={cn('w-full text-ink', lead ? 'my-2.5 h-12 max-w-[120px]' : 'my-2 h-9 max-w-[92px]')}
+        className={cn(lead ? 'my-2.5 h-12' : 'my-2 h-9')}
       />
       {carded ? (
         <div className="w-full truncate px-1 text-sm font-semibold leading-tight" title={`${row.nome} ${row.cognome}`}>

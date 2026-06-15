@@ -12,7 +12,7 @@ export function ClassificaDetail({ data, socioId }: { data: ClassificaResponse; 
       {riga ? (
         <>
           <div className="mt-4 flex items-center gap-3">
-            <CarSilhouette modello={riga.socio.modello_auto} className="h-9 w-16 shrink-0 text-ink" />
+            <CarSilhouette modello={riga.socio.modello_auto} className="h-10 shrink-0" />
             <div className="min-w-0">
               <div className="truncate text-lg font-bold leading-tight">{riga.socio.nome} {riga.socio.cognome}</div>
               <div className="text-xs text-ink/55">Tessera {riga.socio.numero_tessera}</div>
