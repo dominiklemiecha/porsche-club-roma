@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClassificaTable } from '@/components/classifica-table';
+import { ClassificaTable, PAGE_SIZE } from '@/components/classifica-table';
 import { ClassificaDetail } from '@/components/classifica-detail';
 import { Podium } from '@/components/dashboard/podium';
 import { api, apiPdf } from '@/lib/api';
@@ -30,6 +30,7 @@ export default function ClassificaPage() {
   const [scope, setScope] = useState<Scope>('totale');
   const [data, setData] = useState<ClassificaResponse | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
 
   const [showFilters, setShowFilters] = useState(false);
   const [mode, setMode] = useState<FilterMode>('none');
@@ -70,8 +71,11 @@ export default function ClassificaPage() {
 
   useEffect(() => {
     if (anno == null) return;
-    api<ClassificaResponse>(`/classifica?${queryString}`).then(d => { setData(d); setSelected(null); });
+    api<ClassificaResponse>(`/classifica?${queryString}`).then(d => { setData(d); setSelected(null); setPage(0); });
   }, [queryString, anno]);
+
+  const pages = Math.max(1, Math.ceil((data?.righe.length ?? 0) / PAGE_SIZE));
+  const safePage = Math.min(page, pages - 1);
 
   async function pdf() {
     const p = new URLSearchParams({ categoria: scope });
@@ -160,15 +164,36 @@ export default function ClassificaPage() {
       )}
 
       {/* Content */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="min-w-0 space-y-5">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-[auto_auto]">
+        <div className="min-w-0 space-y-5 lg:col-start-1 lg:row-start-1">
           {data && podio.length > 0 && <Podium rows={podio} carded />}
-          {data && <ClassificaTable data={data} selectedId={selected ?? data.righe[0]?.socio.id ?? null} onSelect={setSelected} />}
+          {data && <ClassificaTable data={data} page={safePage} selectedId={selected ?? data.righe[0]?.socio.id ?? null} onSelect={setSelected} />}
+        </div>
+
+        {data && <ClassificaDetail data={data} socioId={selected} className="lg:col-start-2 lg:row-start-1" />}
+
+        <div className="space-y-3 lg:col-start-1 lg:row-start-2">
+          {pages > 1 && (
+            <div className="flex items-center justify-center gap-3 text-sm">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-paper text-ink hover:bg-ink/[0.03] disabled:opacity-40">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="tabular-nums text-ink/60">Pagina {safePage + 1} di {pages}</span>
+              <button
+                onClick={() => setPage(p => Math.min(pages - 1, p + 1))}
+                disabled={safePage >= pages - 1}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-paper text-ink hover:bg-ink/[0.03] disabled:opacity-40">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <button onClick={pdf} className="inline-flex items-center gap-2 text-sm font-semibold text-porsche hover:underline">
             <FileText className="h-4 w-4" /> Esporta classifica PDF
           </button>
         </div>
-        {data && <ClassificaDetail data={data} socioId={selected} />}
       </div>
     </div>
   );

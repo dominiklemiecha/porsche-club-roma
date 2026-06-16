@@ -1,12 +1,13 @@
 'use client';
 import { CarSilhouette } from '@/components/car-silhouette';
+import { cn } from '@/lib/utils';
 import type { ClassificaResponse } from '@/lib/types';
 
-export function ClassificaDetail({ data, socioId }: { data: ClassificaResponse; socioId: number | null }) {
+export function ClassificaDetail({ data, socioId, className }: { data: ClassificaResponse; socioId: number | null; className?: string }) {
   const riga = data.righe.find(r => r.socio.id === socioId) ?? data.righe[0];
 
   return (
-    <div className="card p-5">
+    <div className={cn('card p-5', className)}>
       <h2 className="text-base font-semibold">Dettaglio punteggio</h2>
 
       {riga ? (
