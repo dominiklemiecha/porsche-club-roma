@@ -65,7 +65,7 @@ export function Sidebar() {
 
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-paper lg:flex">
-        <div className="px-5 py-6"><Brand /></div>
+        <div className="flex justify-center px-5 py-6"><Brand /></div>
         {Nav}
         <div className="pb-3">{Logout}</div>
       </aside>
