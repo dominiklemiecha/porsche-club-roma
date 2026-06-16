@@ -63,13 +63,13 @@ export function ClassificaTable({ data, page, selectedId, onSelect }: Props) {
           </colgroup>
           <thead>
             <tr className="text-[11px] uppercase tracking-wide text-ink/45">
-              <th className="sticky left-0 z-20 w-14 border-b border-line bg-paper px-4 py-3 text-left font-semibold">Pos.</th>
-              <th className="sticky left-14 z-20 w-[180px] border-b border-line bg-paper px-4 py-3 text-left font-semibold">Socio</th>
-              <th className="sticky left-[236px] z-20 w-20 border-b border-r border-line bg-paper px-3 py-3 text-center font-semibold shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]">Totale<br />punti</th>
+              <th style={{ left: 0 }} className="sticky z-20 border-b border-line bg-paper px-4 py-3 text-left font-semibold">Pos.</th>
+              <th style={{ left: 56 }} className="sticky z-20 border-b border-line bg-paper px-4 py-3 text-left font-semibold">Socio</th>
+              <th style={{ left: 236 }} className="sticky z-20 border-b border-r border-line bg-paper px-3 py-3 text-center font-semibold shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]">Totale<br />punti</th>
               {data.eventi.map(e => (
-                <th key={e.id} className="border-b border-line px-2 py-3 text-center font-semibold" title={e.titolo}>
-                  <div className="mx-auto max-w-[68px] truncate">{e.titolo}</div>
-                  <div className="font-normal opacity-70">{evDate(e.data_evento)}</div>
+                <th key={e.id} className="border-b border-line px-1.5 py-3 text-center align-top font-semibold" title={e.titolo}>
+                  <div className="text-[9px] leading-tight break-words">{e.titolo}</div>
+                  <div className="mt-1 text-[10px] font-normal opacity-70">{evDate(e.data_evento)}</div>
                 </th>
               ))}
             </tr>
@@ -84,9 +84,9 @@ export function ClassificaTable({ data, page, selectedId, onSelect }: Props) {
                   onClick={() => onSelect?.(r.socio.id)}
                   className={cn('group cursor-pointer', active && 'text-ink')}
                 >
-                  <td className={cn('sticky left-0 z-10 border-b border-line/60 px-4 py-3 font-medium text-ink/70', bg)}>{r.posizione}</td>
-                  <td className={cn('sticky left-14 z-10 border-b border-line/60 px-4 py-3 font-semibold', bg)}>{r.socio.nome} {r.socio.cognome}</td>
-                  <td className={cn('sticky left-[236px] z-10 border-b border-r border-line/60 px-3 py-3 text-center text-base font-bold tabular-nums shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]', bg)}>{r.totale}</td>
+                  <td style={{ left: 0 }} className={cn('sticky z-10 border-b border-line/60 px-4 py-3 font-medium text-ink/70', bg)}>{r.posizione}</td>
+                  <td style={{ left: 56 }} className={cn('sticky z-10 border-b border-line/60 px-4 py-3 font-semibold', bg)}>{r.socio.nome} {r.socio.cognome}</td>
+                  <td style={{ left: 236 }} className={cn('sticky z-10 border-b border-r border-line/60 px-3 py-3 text-center text-base font-bold tabular-nums shadow-[2px_0_4px_-2px_rgba(0,0,0,0.12)]', bg)}>{r.totale}</td>
                   {data.eventi.map(e => (
                     <td key={e.id} className="border-b border-line/60 px-2 py-3 text-center tabular-nums text-ink/80 group-hover:bg-ink/[0.02]">{r.punti_per_evento[e.id] ?? 0}</td>
                   ))}
