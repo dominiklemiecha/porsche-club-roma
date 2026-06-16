@@ -49,7 +49,18 @@ export function ClassificaTable({ data, page, selectedId, onSelect }: Props) {
 
       {/* Desktop */}
       <div className="card hidden overflow-x-auto sm:block">
-        <table className="w-full border-separate border-spacing-0 text-sm">
+        <table
+          className="table-fixed border-separate border-spacing-0 text-sm"
+          style={{ minWidth: 56 + 180 + 80 + data.eventi.length * 80 }}
+        >
+          <colgroup>
+            <col style={{ width: 56 }} />
+            <col style={{ width: 180 }} />
+            <col style={{ width: 80 }} />
+            {data.eventi.map(e => (
+              <col key={e.id} style={{ width: 80 }} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="text-[11px] uppercase tracking-wide text-ink/45">
               <th className="sticky left-0 z-20 w-14 border-b border-line bg-paper px-4 py-3 text-left font-semibold">Pos.</th>
