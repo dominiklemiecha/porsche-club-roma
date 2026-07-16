@@ -46,9 +46,9 @@ export class EventiController {
     return this.svc.setImmagine(id, `/uploads/${file.filename}`);
   }
 
-  @Post(':id/partecipazioni/import-xlsx')
+  @Post(':id/partecipazioni/import')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
-  importXlsx(@Param('id', ParseIntPipe) id: number, @UploadedFile() file?: { buffer: Buffer }) {
+  importFile(@Param('id', ParseIntPipe) id: number, @UploadedFile() file?: { buffer: Buffer }) {
     if (!file?.buffer) throw new BadRequestException('Nessun file caricato');
     return this.importSvc.preview(id, file.buffer);
   }

@@ -53,3 +53,68 @@ export function matchPartecipanti(righe: RigaFile[], soci: SocioLite[]): MatchRe
   }
   return res;
 }
+
+export function sniffFormato(buf: Buffer): 'xlsx' | 'pdf' | 'csv' {
+  if (buf.length >= 2 && buf[0] === 0x50 && buf[1] === 0x4b) return 'xlsx'; // "PK" (zip)
+  if (buf.slice(0, 5).toString('latin1') === '%PDF-') return 'pdf';
+  return 'csv';
+}
+
+/** Parser CSV RFC4180: BOM, campi quotati, sniffing separatore , vs ; */
+export function parseCsv(testo: string): string[][] {
+  const s = testo.replace(/^﻿/, '');
+  const primaRiga = s.split(/\r?\n/).find(r => r.trim()) ?? '';
+  let virgole = 0, puntiVirgola = 0, inQ = false;
+  for (const ch of primaRiga) {
+    if (ch === '"') inQ = !inQ;
+    else if (!inQ && ch === ',') virgole++;
+    else if (!inQ && ch === ';') puntiVirgola++;
+  }
+  const sep = puntiVirgola > virgole ? ';' : ',';
+
+  const righe: string[][] = [];
+  let campo = '', riga: string[] = [], quoted = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (quoted) {
+      if (c === '"') {
+        if (s[i + 1] === '"') { campo += '"'; i++; } else quoted = false;
+      } else campo += c;
+    } else if (c === '"') quoted = true;
+    else if (c === sep) { riga.push(campo); campo = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && s[i + 1] === '\n') i++;
+      riga.push(campo); campo = '';
+      righe.push(riga); riga = [];
+    } else campo += c;
+  }
+  if (campo !== '' || riga.length > 0) { riga.push(campo); righe.push(riga); }
+  return righe;
+}
+
+/**
+ * Estrae la colonna dei soci da una matrice di celle (csv o xlsx).
+ * Se nelle prime 5 righe una cella è un'intestazione nota (es. "Socio"),
+ * usa quella colonna dalle righe successive; altrimenti la prima colonna.
+ * Scarta celle vuote o solo numeriche (es. riga dei totali).
+ */
+export function estraiColonnaSocio(matrice: string[][]): RigaFile[] {
+  // "socio"/"soci" ha priorità sulle intestazioni generiche: negli export Forms
+  // la colonna metadata "Nome" (il compilatore) precede la domanda "Socio"
+  let col = 0, start = 0;
+  outer:
+  for (const chiavi of [new Set(['socio', 'soci']), INTESTAZIONI]) {
+    for (let r = 0; r < Math.min(matrice.length, 5); r++) {
+      for (let c = 0; c < (matrice[r]?.length ?? 0); c++) {
+        if (chiavi.has(normalizza(matrice[r][c] ?? ''))) { col = c; start = r + 1; break outer; }
+      }
+    }
+  }
+  const righe: RigaFile[] = [];
+  for (let r = start; r < matrice.length; r++) {
+    const testo = String(matrice[r]?.[col] ?? '').trim();
+    if (!testo || /^\d+$/.test(testo)) continue;
+    righe.push({ riga: r + 1, testo });
+  }
+  return righe;
+}

@@ -1,4 +1,4 @@
-import { matchPartecipanti, normalizza, SocioLite } from './import-partecipanti.util';
+import { estraiColonnaSocio, matchPartecipanti, normalizza, parseCsv, sniffFormato, SocioLite } from './import-partecipanti.util';
 
 const soci: SocioLite[] = [
   { id: 1, cognome: 'Rossi', nome: 'Mario', numero_tessera: 10 },
@@ -53,5 +53,79 @@ describe('matchPartecipanti', () => {
     expect(r.non_trovati).toEqual([{ riga: 1, testo: 'Verdi Giuseppe' }]);
     expect(r.ambigui).toHaveLength(1);
     expect(r.ambigui[0].candidati.map(c => c.id).sort()).toEqual([4, 5]);
+  });
+});
+
+describe('sniffFormato', () => {
+  it('riconosce xlsx (zip), pdf e fallback csv', () => {
+    expect(sniffFormato(Buffer.from('PK\x03\x04resto'))).toBe('xlsx');
+    expect(sniffFormato(Buffer.from('%PDF-1.7 resto'))).toBe('pdf');
+    expect(sniffFormato(Buffer.from('Socio,Ospite\nRossi, Mario'))).toBe('csv');
+  });
+});
+
+describe('parseCsv', () => {
+  it('separatore virgola con campi quotati contenenti virgole', () => {
+    const r = parseCsv('Number,Socio,Ospite\n1,"Rossi, Mario","Anna Verdi"\n2,"Bianchi, Anna",');
+    expect(r).toEqual([
+      ['Number', 'Socio', 'Ospite'],
+      ['1', 'Rossi, Mario', 'Anna Verdi'],
+      ['2', 'Bianchi, Anna', ''],
+    ]);
+  });
+
+  it('separatore punto e virgola e BOM', () => {
+    const r = parseCsv('﻿Number;Socio\n1;Rossi, Mario');
+    expect(r).toEqual([['Number', 'Socio'], ['1', 'Rossi, Mario']]);
+  });
+
+  it('virgolette doppie escapate e CRLF', () => {
+    const r = parseCsv('a,b\r\n"x ""y""",z\r\n');
+    expect(r).toEqual([['a', 'b'], ['x "y"', 'z']]);
+  });
+});
+
+describe('estraiColonnaSocio', () => {
+  it('usa la colonna con intestazione "Socio" (struttura Forms)', () => {
+    const r = estraiColonnaSocio([
+      ['Number', 'Socio', 'Ospite', 'Targa'],
+      ['1', 'Rossi, Mario', 'Anna Verdi', 'AB123CD'],
+      ['2', 'Bianchi, Anna', '', ''],
+      ['3', '', 'Solo, Ospite', ''],   // socio vuoto -> scartata
+      ['', '74', '', ''],              // riga totale numerica -> scartata
+    ]);
+    expect(r).toEqual([
+      { riga: 2, testo: 'Rossi, Mario' },
+      { riga: 3, testo: 'Bianchi, Anna' },
+    ]);
+  });
+
+  it('senza intestazione usa la prima colonna (retrocompatibile xlsx)', () => {
+    const r = estraiColonnaSocio([['Rossi Mario'], ['Bianchi Anna'], ['']]);
+    expect(r).toEqual([
+      { riga: 1, testo: 'Rossi Mario' },
+      { riga: 2, testo: 'Bianchi Anna' },
+    ]);
+  });
+
+  it('trova l\'intestazione anche se non in prima riga', () => {
+    const r = estraiColonnaSocio([
+      ['Castello di Torre Alfina | Sabato 2 maggio 2026'],
+      ['Number', 'Socio', 'Ospite'],
+      ['1', 'Rossi, Mario', 'x'],
+    ]);
+    expect(r).toEqual([{ riga: 3, testo: 'Rossi, Mario' }]);
+  });
+
+  it('preferisce "Socio" alle colonne metadata Forms (es. "Nome" del compilatore)', () => {
+    const r = estraiColonnaSocio([
+      ['ID', 'Ora di inizio', 'Posta elettronica', 'Nome', 'Socio', 'Ospite'],
+      ['1', '01/05/2026', 'segreteria@pcr.it', 'Segreteria PCR', 'Rossi, Mario', 'x'],
+      ['2', '01/05/2026', 'segreteria@pcr.it', 'Segreteria PCR', 'Bianchi, Anna', ''],
+    ]);
+    expect(r).toEqual([
+      { riga: 2, testo: 'Rossi, Mario' },
+      { riga: 3, testo: 'Bianchi, Anna' },
+    ]);
   });
 });

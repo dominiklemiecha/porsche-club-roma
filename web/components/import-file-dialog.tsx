@@ -19,7 +19,7 @@ interface Preview {
   ambigui: { riga: number; testo: string; candidati: Socio[] }[];
 }
 
-export function ImportXlsxDialog({ open, onOpenChange, evento, current, onSaved }: Props) {
+export function ImportFileDialog({ open, onOpenChange, evento, current, onSaved }: Props) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ export function ImportXlsxDialog({ open, onOpenChange, evento, current, onSaved 
     if (!f) return;
     setFileName(f.name); setErr(null); setPreview(null); setLoading(true);
     try {
-      setPreview(await apiUpload<Preview>(`/eventi/${evento.id}/partecipazioni/import-xlsx`, f));
+      setPreview(await apiUpload<Preview>(`/eventi/${evento.id}/partecipazioni/import`, f));
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
   }
@@ -61,14 +61,15 @@ export function ImportXlsxDialog({ open, onOpenChange, evento, current, onSaved 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Importa partecipanti da Excel — {evento.titolo}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Importa partecipanti — {evento.titolo}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <p className="text-sm text-neutral-600">
-            Carica un file .xlsx con una colonna contenente cognome e nome dei partecipanti
-            (una persona per riga, es. &quot;Rossi Mario&quot;).
+            Carica l&apos;export delle risposte di Forms (.csv o .pdf) oppure un Excel (.xlsx)
+            con i nomi dei partecipanti: viene letta la colonna &quot;Socio&quot;
+            (o la prima colonna se non c&apos;è intestazione).
           </p>
           <input
-            ref={inputRef} type="file" accept=".xlsx"
+            ref={inputRef} type="file" accept=".xlsx,.csv,.pdf"
             className="hidden"
             onChange={e => onFile(e.target.files?.[0])}
           />
