@@ -29,13 +29,18 @@ model Setting {
 
 model Socio {
   id              Int             @id @default(autoincrement())
-  numero_tessera  Int             @unique
+  /// Univoco solo tra i soci attivi (controllo applicativo): un socio disattivato
+  /// conserva la sua tessera storica, che puo' essere riassegnata.
+  numero_tessera  Int
   nome            String          @db.VarChar(100)
   cognome         String          @db.VarChar(100)
   modello_auto    String?         @db.VarChar(150)
   created_at      DateTime        @default(now())
+  /// Valorizzato quando il socio esce dall'elenco ma ha partecipazioni da conservare.
+  disattivato_il  DateTime?
   partecipazioni  Partecipazione[]
 
+  @@index([numero_tessera])
   @@map("soci")
 }
 

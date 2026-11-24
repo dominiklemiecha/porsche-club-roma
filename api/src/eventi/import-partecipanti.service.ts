@@ -19,6 +19,7 @@ export class ImportPartecipantiService {
     if (righe.length === 0) throw new BadRequestException('Il file è vuoto');
 
     const soci = await this.prisma.socio.findMany({
+      where: { disattivato_il: null },
       select: { id: true, nome: true, cognome: true, numero_tessera: true },
     });
     return matchPartecipanti(righe, soci);

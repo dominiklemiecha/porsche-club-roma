@@ -107,7 +107,8 @@ export function PartecipazioniDialog({ open, onOpenChange, evento, current, onSa
             </p>
             <div className="max-h-80 overflow-auto rounded border">
               {[...selected.values()].map(s => {
-                const socio = soci.find(x => x.id === s.socio_id)!;
+                // i soci tolti dall'elenco non sono in /soci ma restano tra i partecipanti esistenti
+                const socio = soci.find(x => x.id === s.socio_id) ?? current.find(p => p.socio_id === s.socio_id)?.socio;
                 return (
                   <div key={s.socio_id} className="flex items-center gap-2 border-b px-3 py-2 last:border-0">
                     <span className="flex-1">{socio?.cognome} {socio?.nome}</span>

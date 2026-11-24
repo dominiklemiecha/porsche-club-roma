@@ -17,7 +17,7 @@ export class DashboardService {
     today.setHours(0, 0, 0, 0);
 
     const [sociCount, eventiCount, puntiAgg, totale] = await Promise.all([
-      this.prisma.socio.count(),
+      this.prisma.socio.count({ where: { disattivato_il: null } }),
       this.prisma.evento.count({ where: { anno } }),
       this.prisma.partecipazione.aggregate({
         _sum: { punteggio_totale: true },

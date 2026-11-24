@@ -26,6 +26,15 @@ export class PartecipazioniService {
       }
     }
 
+    // Un socio disattivato puo' restare tra i partecipanti esistenti ma non essere aggiunto.
+    const gia = await this.prisma.partecipazione.findMany({ where: { evento_id }, select: { socio_id: true } });
+    const giaIds = new Set(gia.map(g => g.socio_id));
+    const aggiunti = dto.partecipanti.map(p => p.socio_id).filter(id => !giaIds.has(id));
+    if (aggiunti.length) {
+      const disattivati = await this.prisma.socio.count({ where: { id: { in: aggiunti }, disattivato_il: { not: null } } });
+      if (disattivati) throw new BadRequestException('Non si possono aggiungere soci non più in elenco');
+    }
+
     const rows = dto.partecipanti.map(p => ({
       evento_id,
       socio_id: p.socio_id,

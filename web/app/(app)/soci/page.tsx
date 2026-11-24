@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SociTable } from '@/components/soci-table';
 import { SocioFormDialog } from '@/components/socio-form-dialog';
+import { ImportSociDialog } from '@/components/import-soci-dialog';
 import { api } from '@/lib/api';
 import { carBodyType, type CarBody } from '@/lib/car-model';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,7 @@ export default function SociPage() {
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Socio | null>(null);
+  const [openImport, setOpenImport] = useState(false);
 
   async function load() {
     setRows(await api<Socio[]>(`/soci${q ? `?q=${encodeURIComponent(q)}` : ''}`));
@@ -42,7 +44,12 @@ export default function SociPage() {
   useEffect(() => { setPage(1); }, [q, modello, part]);
 
   async function del(s: Socio) {
-    if (!confirm(`Eliminare ${s.cognome} ${s.nome}?`)) return;
+    const n = s._count?.partecipazioni ?? 0;
+    const msg = n > 0
+      ? `Togliere ${s.cognome} ${s.nome} dall'elenco soci?
+Ha ${n} partecipazion${n === 1 ? 'e' : 'i'}: resterà nello storico degli eventi e in classifica.`
+      : `Eliminare ${s.cognome} ${s.nome}?`;
+    if (!confirm(msg)) return;
     try { await api(`/soci/${s.id}`, { method: 'DELETE' }); load(); }
     catch (e: any) { alert(e.message); }
   }
@@ -81,6 +88,7 @@ export default function SociPage() {
           <option value="con">Con partecipazioni</option>
           <option value="senza">Senza partecipazioni</option>
         </select>
+        <Button variant="outline" onClick={() => setOpenImport(true)}>Importa elenco</Button>
         <Button variant="dark" onClick={() => { setEditing(null); setOpen(true); }}>+ Nuovo socio</Button>
       </div>
 
@@ -99,6 +107,7 @@ export default function SociPage() {
       )}
 
       <SocioFormDialog open={open} onOpenChange={setOpen} socio={editing} onSaved={load} />
+      <ImportSociDialog open={openImport} onOpenChange={setOpenImport} onSaved={load} />
     </div>
   );
 }
