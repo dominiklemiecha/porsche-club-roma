@@ -10,8 +10,9 @@ export class ClassificaService {
   constructor(private prisma: PrismaService) {}
 
   async build(scope: Scope, anno?: number, from?: Date, to?: Date, eventoIds?: number[]) {
+    // il totale somma tutte le categorie: turismo + pista + istituzionale
     const categorie: Categoria[] =
-      scope === 'totale' ? ['turismo', 'pista'] : [scope];
+      scope === 'totale' ? ['turismo', 'pista', 'istituzionale'] : [scope];
 
     const dataFilter: any = {};
     if (from) dataFilter.gte = from;

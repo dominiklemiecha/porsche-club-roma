@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,7 +47,7 @@ export default function ClassificaPage() {
   useEffect(() => { if (anno != null) api<Evento[]>(`/eventi?anno=${anno}`).then(setAllEventi); }, [anno]);
 
   const eventiForPicker = useMemo(() => {
-    const cats: string[] = scope === 'totale' ? ['turismo', 'pista'] : [scope];
+    const cats: string[] = scope === 'totale' ? ['turismo', 'pista', 'istituzionale'] : [scope];
     return allEventi.filter(e => cats.includes(e.categoria))
       .sort((a, b) => new Date(a.data_evento).getTime() - new Date(b.data_evento).getTime());
   }, [scope, allEventi]);
@@ -77,17 +77,14 @@ export default function ClassificaPage() {
   const pages = Math.max(1, Math.ceil((data?.righe.length ?? 0) / PAGE_SIZE));
   const safePage = Math.min(page, pages - 1);
 
-  async function pdf() {
-    const p = new URLSearchParams({ categoria: scope });
-    if (anno != null) p.set('anno', String(anno));
-    if (range.from) p.set('from', range.from);
-    if (range.to) p.set('to', range.to);
-    if (eventiQuery) p.set('eventi', eventiQuery);
-    const blob = await apiPdf(`/pdf/classifica?${p.toString()}`);
+  async function scarica(path: string, ext: 'pdf' | 'xlsx') {
+    const blob = await apiPdf(`${path}?${queryString}`);
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `classifica-${scope}-${anno}.pdf`; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `classifica-${scope}-${anno}.${ext}`; a.click();
     URL.revokeObjectURL(url);
   }
+  const pdf = () => scarica('/pdf/classifica', 'pdf');
+  const excel = () => scarica('/classifica/xlsx', 'xlsx');
 
   function toggleEvento(id: number) {
     const s = new Set(selectedEventi); s.has(id) ? s.delete(id) : s.add(id); setSelectedEventi(s);
@@ -190,9 +187,16 @@ export default function ClassificaPage() {
               </button>
             </div>
           )}
-          <button onClick={pdf} className="inline-flex items-center gap-2 text-sm font-semibold text-porsche hover:underline">
-            <FileText className="h-4 w-4" /> Esporta classifica PDF
-          </button>
+          <div className="flex flex-wrap items-center gap-5">
+            {scope === 'totale' && (
+              <button onClick={excel} className="inline-flex items-center gap-2 text-sm font-semibold text-porsche hover:underline">
+                <FileSpreadsheet className="h-4 w-4" /> Esporta Excel
+              </button>
+            )}
+            <button onClick={pdf} className="inline-flex items-center gap-2 text-sm font-semibold text-porsche hover:underline">
+              <FileText className="h-4 w-4" /> Esporta classifica PDF
+            </button>
+          </div>
         </div>
       </div>
     </div>
