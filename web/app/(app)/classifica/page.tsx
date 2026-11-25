@@ -117,9 +117,19 @@ export default function ClassificaPage() {
             {label}
           </button>
         ))}
-        <Button variant="outline" onClick={() => setShowFilters(v => !v)} className="ml-auto gap-2">
-          <SlidersHorizontal className="h-4 w-4" /> Filtri
-        </Button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {scope === 'totale' && (
+            <Button variant="outline" onClick={excel} className="gap-2">
+              <FileSpreadsheet className="h-4 w-4" /> Esporta Excel
+            </Button>
+          )}
+          <Button variant="outline" onClick={pdf} className="gap-2">
+            <FileText className="h-4 w-4" /> Esporta PDF
+          </Button>
+          <Button variant="outline" onClick={() => setShowFilters(v => !v)} className="gap-2">
+            <SlidersHorizontal className="h-4 w-4" /> Filtri
+          </Button>
+        </div>
       </div>
 
       {showFilters && (
@@ -187,16 +197,6 @@ export default function ClassificaPage() {
               </button>
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-5">
-            {scope === 'totale' && (
-              <button onClick={excel} className="inline-flex items-center gap-2 text-sm font-semibold text-porsche hover:underline">
-                <FileSpreadsheet className="h-4 w-4" /> Esporta Excel
-              </button>
-            )}
-            <button onClick={pdf} className="inline-flex items-center gap-2 text-sm font-semibold text-porsche hover:underline">
-              <FileText className="h-4 w-4" /> Esporta classifica PDF
-            </button>
-          </div>
         </div>
       </div>
     </div>
