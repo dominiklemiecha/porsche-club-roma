@@ -1,4 +1,4 @@
-import { normalizza } from '../eventi/import-partecipanti.util';
+import { chiaveNome, normalizza } from '../eventi/import-partecipanti.util';
 
 /** Riga dell'elenco soci letta dal file. numero_tessera null = mancante/non valida. */
 export interface RigaSocio { riga: number; cognome: string; nome: string; numero_tessera: number | null; }
@@ -6,6 +6,8 @@ export interface RigaSocio { riga: number; cognome: string; nome: string; numero
 export interface SocioDb {
   id: number; numero_tessera: number; nome: string; cognome: string;
   disattivato_il: Date | null; partecipazioni: number;
+  /** chiavi (chiaveNome) delle varianti del nome ricordate */
+  alias: string[];
 }
 
 export interface Piano {
@@ -17,13 +19,16 @@ export interface Piano {
   /** azione: 'disattiva' se ha partecipazioni (resta nello storico), altrimenti 'elimina' */
   rimossi: { id: number; cognome: string; nome: string; numero_tessera: number; partecipazioni: number; azione: 'disattiva' | 'elimina' }[];
   errori: string[];
+  /** stessa tessera ma nome scritto diversamente: si puo' ricordare come variante */
+  nomi_diversi: { socio_id: number; riga: number; file: string; anagrafica: string }[];
   /** segnalazioni non bloccanti */
   avvisi: string[];
   /** tessere dei soci gia' in anagrafica che restano attivi: un nuovo socio non puo' usarle */
   tessere_occupate: number[];
 }
 
-const chiave = (cognome: string, nome: string) => normalizza(`${cognome} ${nome}`);
+/** Nome "lasco": senza accenti, spazi, apostrofi e trattini ("Gian Luca" = "Gianluca"). */
+const chiave = (cognome: string, nome: string) => chiaveNome(`${cognome} ${nome}`);
 
 function tessera(v: string): number | null {
   const t = v.replace(/\s/g, '');
@@ -77,81 +82,113 @@ export function conflittiTessereNuovi(nuovi: RigaSocio[], occupate: number[]): s
 
 /**
  * Confronta l'elenco del file con l'anagrafica e calcola cosa cambia (nessuna scrittura).
- * Abbinamento in due passate: prima stessa tessera + stesso nome, poi solo stesso nome
- * (tessera rinumerata o socio disattivato che rientra). I soci attivi non abbinati escono.
- * Se la tessera del file per un socio abbinato solo per nome e' gia' di un altro socio
- * abbinato esattamente, si conserva la tessera attuale e si segnala un avviso.
+ * La chiave e' il NUMERO TESSERA: un socio attivo con la stessa tessera e' lo stesso socio,
+ * anche se nome/cognome sono scritti diversamente (si conserva il nome in anagrafica).
+ * Il nome serve solo per: scegliere tra righe con tessera ripetuta nel file, riattivare un
+ * socio disattivato, abbinare righe senza tessera utilizzabile. I soci attivi non abbinati escono.
  */
 export function pianificaImport(righe: RigaSocio[], soci: SocioDb[]): Piano {
   const piano: Piano = {
-    righe, invariati: 0, nuovi: [], rinumerati: [], riattivati: [], rimossi: [], errori: [], avvisi: [], tessere_occupate: [],
+    righe, invariati: 0, nuovi: [], rinumerati: [], riattivati: [], rimossi: [], errori: [], nomi_diversi: [], avvisi: [], tessere_occupate: [],
   };
   const usati = new Set<number>();
-  const finali = new Map<number, string[]>(); // tessera -> soci esistenti che restano attivi
-  const segnaTessera = (t: number, chi: string) => finali.set(t, [...(finali.get(t) ?? []), chi]);
-  const etichetta = (r: RigaSocio) => `${r.cognome} ${r.nome}`.trim();
+  const etichetta = (r: { cognome: string; nome: string }) => `${r.cognome} ${r.nome}`.trim();
+  // stesso nome: in entrambi gli ordini o tra le varianti ricordate
+  const stessoNome = (r: RigaSocio, s: SocioDb) => {
+    const k = chiave(r.cognome, r.nome);
+    return k === chiave(s.cognome, s.nome) || k === chiave(s.nome, s.cognome) || s.alias.includes(k);
+  };
+  const attivi = soci.filter(s => !s.disattivato_il);
+  const disattivi = soci.filter(s => s.disattivato_il);
 
   const valide = righe.filter(r => {
     if (r.cognome && r.nome) return true;
     piano.errori.push(`Riga ${r.riga}: cognome o nome mancante (${etichetta(r) || 'vuota'})`);
     return false;
   });
-  const liberi = (r: RigaSocio) => soci.filter(s => !usati.has(s.id) && chiave(s.cognome, s.nome) === chiave(r.cognome, r.nome));
 
-  // 1a passata: stessa tessera + stesso nome
-  const esatti = new Map<RigaSocio, SocioDb>();
+  const abbinati: { r: RigaSocio; socio: SocioDb; tessera: number }[] = [];
+  const daRisolvere: RigaSocio[] = [];
+  const abbina = (r: RigaSocio, socio: SocioDb, tessera = socio.numero_tessera) => {
+    usati.add(socio.id); abbinati.push({ r, socio, tessera });
+  };
+
+  // 1. per tessera
+  const perTessera = new Map<number, RigaSocio[]>();
   for (const r of valide) {
-    if (r.numero_tessera == null) continue;
-    const socio = liberi(r).find(s => s.numero_tessera === r.numero_tessera);
-    if (socio) { usati.add(socio.id); esatti.set(r, socio); }
+    if (r.numero_tessera == null) { daRisolvere.push(r); continue; }
+    perTessera.set(r.numero_tessera, [...(perTessera.get(r.numero_tessera) ?? []), r]);
   }
-  const tessereEsatte = new Set([...esatti.values()].map(s => s.numero_tessera));
-
-  // 2a passata: solo stesso nome
-  const abbinati: [RigaSocio, SocioDb][] = [];
-  for (const r of valide) {
-    const es = esatti.get(r);
-    if (es) { abbinati.push([r, es]); continue; }
-    const lib = liberi(r);
-    const attivi = lib.filter(s => !s.disattivato_il);
-    const candidati = attivi.length > 0 ? attivi : lib;
-    if (candidati.length > 1) {
-      piano.errori.push(`Riga ${r.riga}: ${etichetta(r)} corrisponde a più soci in anagrafica (${candidati.map(c => `#${c.numero_tessera}`).join(', ')})`);
+  for (const [t, gruppo] of perTessera) {
+    const socio = attivi.find(s => s.numero_tessera === t && !usati.has(s.id));
+    if (socio) {
+      // tessera ripetuta nel file: la tiene la riga con il nome del socio in anagrafica
+      const scelta = gruppo.length === 1 ? gruppo[0] : gruppo.find(r => stessoNome(r, socio));
+      if (!scelta) {
+        piano.errori.push(`Tessera ${t} ripetuta nel file (${gruppo.map(etichetta).join(', ')}) e nessuna riga corrisponde a ${etichetta(socio)}`);
+        continue;
+      }
+      if (!stessoNome(scelta, socio)) {
+        piano.nomi_diversi.push({ socio_id: socio.id, riga: scelta.riga, file: etichetta(scelta), anagrafica: etichetta(socio) });
+      }
+      abbina(scelta, socio);
+      daRisolvere.push(...gruppo.filter(r => r !== scelta));
       continue;
     }
-    if (candidati.length === 0) { piano.nuovi.push(r); continue; }
-    usati.add(candidati[0].id);
-    abbinati.push([r, candidati[0]]);
-  }
-
-  for (const [r, socio] of abbinati) {
-    let t = r.numero_tessera ?? socio.numero_tessera;
-    if (t !== socio.numero_tessera && tessereEsatte.has(t)) {
-      piano.avvisi.push(`Riga ${r.riga}: tessera ${t} di ${etichetta(r)} è già di un altro socio, resta la tessera attuale #${socio.numero_tessera}`);
-      t = socio.numero_tessera;
-    }
-    segnaTessera(t, etichetta(r));
-    if (socio.disattivato_il) {
-      piano.riattivati.push({ id: socio.id, cognome: socio.cognome, nome: socio.nome, numero_tessera: t });
-    } else if (t !== socio.numero_tessera) {
-      piano.rinumerati.push({ id: socio.id, cognome: socio.cognome, nome: socio.nome, da: socio.numero_tessera, a: t });
-    } else {
-      piano.invariati++;
+    // nessun attivo con questa tessera: socio disattivato che rientra (stessa tessera e stesso nome)
+    for (const r of gruppo) {
+      const vecchio = disattivi.find(s => s.numero_tessera === t && !usati.has(s.id) && stessoNome(r, s));
+      if (vecchio) abbina(r, vecchio);
+      else daRisolvere.push(r);
     }
   }
 
-  for (const s of soci) {
-    if (s.disattivato_il || usati.has(s.id)) continue;
+  // 2. righe senza tessera utilizzabile o con tessera non in anagrafica
+  for (const r of daRisolvere.sort((a, b) => a.riga - b.riga)) {
+    const ripetuta = r.numero_tessera != null && (perTessera.get(r.numero_tessera)?.length ?? 0) > 1;
+    const omonimi = attivi.filter(s => !usati.has(s.id) && stessoNome(r, s));
+    if (r.numero_tessera == null || ripetuta) {
+      // senza tessera valida si abbina per nome, mantenendo la tessera in anagrafica
+      if (omonimi.length === 1) {
+        abbina(r, omonimi[0]);
+        if (ripetuta) piano.avvisi.push(`Riga ${r.riga}: tessera ${r.numero_tessera} di ${etichetta(r)} è già di un altro socio, resta la tessera attuale #${omonimi[0].numero_tessera}`);
+        continue;
+      }
+      if (omonimi.length > 1) {
+        piano.errori.push(`Riga ${r.riga}: ${etichetta(r)} senza tessera valida e con più omonimi in anagrafica`);
+        continue;
+      }
+      const vecchi = disattivi.filter(s => !usati.has(s.id) && stessoNome(r, s));
+      if (vecchi.length === 1) { abbina(r, vecchi[0]); continue; }
+      piano.nuovi.push(r);
+      continue;
+    }
+    // tessera nuova: e' un socio nuovo; se un socio in uscita ha lo stesso nome lo segnalo
+    piano.nuovi.push(r);
+    if (omonimi.length) {
+      piano.avvisi.push(`Riga ${r.riga}: ${etichetta(r)} (tessera ${r.numero_tessera}) ha lo stesso nome di #${omonimi.map(o => o.numero_tessera).join(', #')} che non è nel file: verrà creato come nuovo socio`);
+    }
+  }
+
+  const finali = new Map<number, string[]>();
+  for (const { r, socio, tessera } of abbinati) {
+    finali.set(tessera, [...(finali.get(tessera) ?? []), etichetta(r)]);
+    if (socio.disattivato_il) piano.riattivati.push({ id: socio.id, cognome: socio.cognome, nome: socio.nome, numero_tessera: tessera });
+    else if (tessera !== socio.numero_tessera) piano.rinumerati.push({ id: socio.id, cognome: socio.cognome, nome: socio.nome, da: socio.numero_tessera, a: tessera });
+    else piano.invariati++;
+  }
+  for (const [t, nomi] of finali) {
+    if (nomi.length > 1) piano.errori.push(`Tessera ${t} assegnata a più soci: ${nomi.join(', ')}`);
+  }
+  piano.tessere_occupate = [...finali.keys()].sort((a, b) => a - b);
+
+  for (const s of attivi) {
+    if (usati.has(s.id)) continue;
     piano.rimossi.push({
       id: s.id, cognome: s.cognome, nome: s.nome, numero_tessera: s.numero_tessera,
       partecipazioni: s.partecipazioni, azione: s.partecipazioni > 0 ? 'disattiva' : 'elimina',
     });
   }
-
-  for (const [t, nomi] of finali) {
-    if (nomi.length > 1) piano.errori.push(`Tessera ${t} assegnata a più soci: ${nomi.join(', ')}`);
-  }
-  piano.tessere_occupate = [...finali.keys()].sort((a, b) => a - b);
   piano.rimossi.sort((a, b) => a.cognome.localeCompare(b.cognome));
   return piano;
 }

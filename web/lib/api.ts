@@ -19,8 +19,9 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   return res.json();
 }
 
-export async function apiUpload<T = any>(path: string, file: File): Promise<T> {
+export async function apiUpload<T = any>(path: string, file: File, campi: Record<string, string> = {}): Promise<T> {
   const fd = new FormData();
+  for (const [k, v] of Object.entries(campi)) fd.append(k, v);
   fd.append('file', file);
   const res = await fetch(`${BASE}/api${path}`, { method: 'POST', credentials: 'include', body: fd });
   if (res.status === 401) {

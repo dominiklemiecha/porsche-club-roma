@@ -1,4 +1,6 @@
 export interface SocioLite { id: number; nome: string; cognome: string; numero_tessera: number; }
+/** Socio con le chiavi delle varianti del nome ricordate (vedi chiaveNome). */
+export type SocioConAlias = SocioLite & { alias?: string[] };
 export interface RigaFile { riga: number; testo: string; }
 
 export interface MatchResult {
@@ -18,26 +20,34 @@ export function normalizza(s: string): string {
     .replace(/[,;]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/** Chiave di confronto nomi: solo lettere, senza accenti/spazi/apostrofi ("Gian Luca" = "Gianluca"). */
+export function chiaveNome(s: string): string {
+  return normalizza(s).replace(/[^a-z]/g, '');
+}
+
 /**
  * Matcha le righe del file ("Cognome Nome" o "Nome Cognome", virgola opzionale)
  * contro l'anagrafica soci. Righe duplicate sullo stesso socio contano una volta.
  */
-export function matchPartecipanti(righe: RigaFile[], soci: SocioLite[]): MatchResult {
+export function matchPartecipanti(righe: RigaFile[], soci: SocioConAlias[]): MatchResult {
   const byKey = new Map<string, SocioLite[]>();
-  const add = (k: string, s: SocioLite) => {
+  const add = (k: string, { alias, ...s }: SocioConAlias) => {
+    if (!k) return;
     const arr = byKey.get(k) ?? [];
     if (!arr.some(x => x.id === s.id)) { arr.push(s); byKey.set(k, arr); }
   };
   for (const s of soci) {
-    add(normalizza(`${s.cognome} ${s.nome}`), s);
-    add(normalizza(`${s.nome} ${s.cognome}`), s);
+    add(chiaveNome(`${s.cognome} ${s.nome}`), s);
+    add(chiaveNome(`${s.nome} ${s.cognome}`), s);
+    for (const a of s.alias ?? []) add(a, s);
   }
 
   const res: MatchResult = { trovati: [], non_trovati: [], ambigui: [] };
   const visti = new Set<number>();
   for (const r of righe) {
-    const key = normalizza(r.testo);
-    if (!key || INTESTAZIONI.has(key)) continue;
+    if (INTESTAZIONI.has(normalizza(r.testo))) continue;
+    const key = chiaveNome(r.testo);
+    if (!key) continue;
     const candidati = byKey.get(key) ?? [];
     if (candidati.length === 1) {
       const socio = candidati[0];
@@ -92,29 +102,88 @@ export function parseCsv(testo: string): string[][] {
   return righe;
 }
 
+/** Tabella letta dal file: intestazioni (se riconosciute) e righe dati con numero di riga. */
+export interface Tabella {
+  intestazioni: string[] | null;
+  righe: { riga: number; celle: string[] }[];
+  /** colonna proposta per i nomi e, se il file ha Cognome e Nome separati, la seconda */
+  colonna: number;
+  colonna2: number | null;
+}
+
+export interface InfoColonna { indice: number; intestazione: string; esempi: string[]; }
+
+/** Cerca nella riga una cella con intestazione nota: prima "socio", poi le generiche. */
+export function trovaColonnaNomi(header: string[]): number {
+  for (const chiavi of [new Set(['socio', 'soci']), INTESTAZIONI]) {
+    const i = header.findIndex(c => chiavi.has(normalizza(c ?? '')));
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+
+/** Se la colonna scelta e' "Cognome" e c'e' "Nome" (o viceversa) propone di unirle. */
+function colonnaComplementare(header: string[], col: number): number | null {
+  const h = normalizza(header[col] ?? '');
+  const altro = h === 'cognome' ? 'nome' : h === 'nome' ? 'cognome' : null;
+  if (!altro) return null;
+  const i = header.findIndex(c => normalizza(c ?? '') === altro);
+  return i >= 0 ? i : null;
+}
+
 /**
- * Estrae la colonna dei soci da una matrice di celle (csv o xlsx).
- * Se nelle prime 5 righe una cella è un'intestazione nota (es. "Socio"),
- * usa quella colonna dalle righe successive; altrimenti la prima colonna.
- * Scarta celle vuote o solo numeriche (es. riga dei totali).
+ * Da matrice di celle (csv o xlsx) a tabella. Se nelle prime 5 righe c'e' un'intestazione
+ * nota (es. "Socio", "Cognome e nome") quella riga fa da intestazione e propone la colonna;
+ * altrimenti nessuna intestazione e prima colonna.
  */
-export function estraiColonnaSocio(matrice: string[][]): RigaFile[] {
+export function tabellaDaMatrice(matrice: string[][]): Tabella {
   // "socio"/"soci" ha priorità sulle intestazioni generiche: negli export Forms
   // la colonna metadata "Nome" (il compilatore) precede la domanda "Socio"
-  let col = 0, start = 0;
+  let headerRow = -1, col = 0;
   outer:
   for (const chiavi of [new Set(['socio', 'soci']), INTESTAZIONI]) {
     for (let r = 0; r < Math.min(matrice.length, 5); r++) {
-      for (let c = 0; c < (matrice[r]?.length ?? 0); c++) {
-        if (chiavi.has(normalizza(matrice[r][c] ?? ''))) { col = c; start = r + 1; break outer; }
-      }
+      const c = (matrice[r] ?? []).findIndex(x => chiavi.has(normalizza(x ?? '')));
+      if (c >= 0) { headerRow = r; col = c; break outer; }
     }
   }
-  const righe: RigaFile[] = [];
-  for (let r = start; r < matrice.length; r++) {
-    const testo = String(matrice[r]?.[col] ?? '').trim();
-    if (!testo || /^\d+$/.test(testo)) continue;
-    righe.push({ riga: r + 1, testo });
+  const intestazioni = headerRow >= 0 ? (matrice[headerRow] ?? []).map(x => String(x ?? '').trim()) : null;
+  const righe: Tabella['righe'] = [];
+  for (let r = headerRow + 1; r < matrice.length; r++) {
+    righe.push({ riga: r + 1, celle: (matrice[r] ?? []).map(x => String(x ?? '').trim()) });
   }
-  return righe;
+  return { intestazioni, righe, colonna: col, colonna2: intestazioni ? colonnaComplementare(intestazioni, col) : null };
+}
+
+const lettera = (i: number) => (i < 26 ? String.fromCharCode(65 + i) : `${String.fromCharCode(64 + Math.floor(i / 26))}${String.fromCharCode(65 + (i % 26))}`);
+
+/** Elenco colonne non vuote con intestazione (o lettera) e qualche valore d'esempio. */
+export function infoColonne(t: Tabella): InfoColonna[] {
+  const n = Math.max(t.intestazioni?.length ?? 0, ...t.righe.map(r => r.celle.length), 0);
+  const out: InfoColonna[] = [];
+  for (let i = 0; i < n; i++) {
+    const esempi = t.righe.map(r => r.celle[i] ?? '').filter(Boolean).slice(0, 3);
+    const intest = t.intestazioni?.[i]?.trim();
+    if (!esempi.length && !intest) continue;
+    out.push({ indice: i, intestazione: intest || `Colonna ${lettera(i)}`, esempi });
+  }
+  return out;
+}
+
+/** Testi dei nomi dalla colonna scelta (eventualmente unita a una seconda). Scarta vuote e solo numeri. */
+export function righeDaTabella(t: Tabella, col: number, col2: number | null = null): RigaFile[] {
+  const out: RigaFile[] = [];
+  for (const r of t.righe) {
+    const parti = [r.celle[col] ?? '', col2 != null ? r.celle[col2] ?? '' : ''];
+    const testo = parti.map(p => p.trim()).filter(Boolean).join(' ');
+    if (!testo || /^\d+$/.test(testo)) continue;
+    out.push({ riga: r.riga, testo });
+  }
+  return out;
+}
+
+/** Colonna proposta dalla tabella (compatibilità: usata da test e xlsx senza scelta). */
+export function estraiColonnaSocio(matrice: string[][]): RigaFile[] {
+  const t = tabellaDaMatrice(matrice);
+  return righeDaTabella(t, t.colonna);
 }

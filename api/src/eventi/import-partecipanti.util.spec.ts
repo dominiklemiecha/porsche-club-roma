@@ -1,4 +1,6 @@
-import { estraiColonnaSocio, matchPartecipanti, normalizza, parseCsv, sniffFormato, SocioLite } from './import-partecipanti.util';
+import {
+  chiaveNome, estraiColonnaSocio, infoColonne, matchPartecipanti, normalizza, parseCsv, righeDaTabella, sniffFormato, SocioLite, tabellaDaMatrice,
+} from './import-partecipanti.util';
 
 const soci: SocioLite[] = [
   { id: 1, cognome: 'Rossi', nome: 'Mario', numero_tessera: 10 },
@@ -127,5 +129,50 @@ describe('estraiColonnaSocio', () => {
       { riga: 2, testo: 'Rossi, Mario' },
       { riga: 3, testo: 'Bianchi, Anna' },
     ]);
+  });
+});
+
+describe('varianti del nome', () => {
+  it('"Gian Luca" e "Gianluca", apostrofi e trattini coincidono', () => {
+    expect(chiaveNome("D'Angelo Gian Luca")).toBe(chiaveNome('Dangelo Gianluca'));
+    const r = matchPartecipanti([{ riga: 1, testo: 'Gianluca Rossi' }], [{ id: 9, cognome: 'Rossi', nome: 'Gian Luca', numero_tessera: 1 }]);
+    expect(r.trovati.map(t => t.socio.id)).toEqual([9]);
+  });
+
+  it('usa le varianti ricordate (alias)', () => {
+    const r = matchPartecipanti([{ riga: 1, testo: 'Johnny Rossi' }],
+      [{ id: 9, cognome: 'Rossi', nome: 'Giovanni', numero_tessera: 1, alias: [chiaveNome('Johnny Rossi')] }]);
+    expect(r.trovati.map(t => t.socio.id)).toEqual([9]);
+    expect(r.trovati[0].socio).not.toHaveProperty('alias');
+  });
+});
+
+describe('scelta colonna', () => {
+  const m = [
+    ['Data', 'Cognome', 'Nome', 'Email'],
+    ['1/1', 'Rossi', 'Mario', 'm@x.it'],
+    ['2/1', 'Bianchi', 'Anna', ''],
+  ];
+
+  it('propone Cognome + Nome quando sono colonne separate', () => {
+    const t = tabellaDaMatrice(m);
+    expect([t.colonna, t.colonna2]).toEqual([1, 2]);
+    expect(righeDaTabella(t, t.colonna, t.colonna2).map(r => r.testo)).toEqual(['Rossi Mario', 'Bianchi Anna']);
+  });
+
+  it('elenca colonne con intestazione ed esempi; colonna scelta a mano', () => {
+    const t = tabellaDaMatrice(m);
+    expect(infoColonne(t).map(c => c.intestazione)).toEqual(['Data', 'Cognome', 'Nome', 'Email']);
+    expect(infoColonne(t)[3].esempi).toEqual(['m@x.it']);
+    expect(righeDaTabella(t, 3).map(r => r.testo)).toEqual(['m@x.it']);
+  });
+
+  it('colonna unica "Cognome, Nome" con intestazione personalizzata scelta a mano', () => {
+    const t = tabellaDaMatrice([['Iscritto', 'Auto'], ['Rossi, Mario', '911'], ['Bianchi, Anna', '718']]);
+    expect(t.intestazioni).toBeNull();
+    expect(infoColonne(t).map(c => c.intestazione)).toEqual(['Colonna A', 'Colonna B']);
+    const r = matchPartecipanti(righeDaTabella(t, 0), soci);
+    expect(r.trovati.map(x => x.socio.id)).toEqual([1, 3]);
+    expect(r.non_trovati.map(x => x.testo)).toEqual(['Iscritto']);
   });
 });

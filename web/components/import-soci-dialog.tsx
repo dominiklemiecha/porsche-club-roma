@@ -20,10 +20,11 @@ interface Piano {
   riattivati: { id: number; cognome: string; nome: string; numero_tessera: number }[];
   rimossi: { id: number; cognome: string; nome: string; numero_tessera: number; partecipazioni: number; azione: 'disattiva' | 'elimina' }[];
   errori: string[];
+  nomi_diversi: { socio_id: number; riga: number; file: string; anagrafica: string }[];
   avvisi: string[];
   tessere_occupate: number[];
 }
-interface Esito { aggiunti: number; rinumerati: number; riattivati: number; eliminati: number; disattivati: number; invariati: number; }
+interface Esito { aggiunti: number; rinumerati: number; riattivati: number; eliminati: number; disattivati: number; invariati: number; varianti: number; }
 
 const box = 'max-h-48 overflow-auto rounded border';
 const row = 'flex items-center gap-2 border-b px-3 py-1.5 text-sm last:border-0';
@@ -32,6 +33,7 @@ export function ImportSociDialog({ open, onOpenChange, onSaved }: Props) {
   const [piano, setPiano] = useState<Piano | null>(null);
   const [tessere, setTessere] = useState<Record<number, string>>({});
   const [confermaRimozione, setConfermaRimozione] = useState(false);
+  const [ricorda, setRicorda] = useState<Set<number>>(new Set());
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,6 +53,7 @@ export function ImportSociDialog({ open, onOpenChange, onSaved }: Props) {
     try {
       const p = await apiUpload<Piano>('/soci/import', f);
       setPiano(p);
+      setRicorda(new Set(p.nomi_diversi.map(n => n.socio_id)));
       setTessere(Object.fromEntries(p.nuovi.map(n => [n.riga, n.numero_tessera != null ? String(n.numero_tessera) : ''])));
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); if (inputRef.current) inputRef.current.value = ''; }
@@ -76,7 +79,7 @@ export function ImportSociDialog({ open, onOpenChange, onSaved }: Props) {
   const daEliminare = piano?.rimossi.filter(r => r.azione === 'elimina').length ?? 0;
   const daDisattivare = (piano?.rimossi.length ?? 0) - daEliminare;
   const modifiche = piano
-    ? piano.nuovi.length + piano.rinumerati.length + piano.riattivati.length + piano.rimossi.length
+    ? piano.nuovi.length + piano.rinumerati.length + piano.riattivati.length + piano.rimossi.length + ricorda.size
     : 0;
   const puoConfermare = !!piano && !esito && piano.errori.length === 0 && tessereOk && modifiche > 0
     && (piano.rimossi.length === 0 || confermaRimozione);
@@ -87,7 +90,7 @@ export function ImportSociDialog({ open, onOpenChange, onSaved }: Props) {
     const righe = piano.righe.map(r => nuoviRighe.has(r.riga) ? { ...r, numero_tessera: Number(tessere[r.riga]) } : r);
     try {
       const res = await api<Esito>('/soci/import/conferma', {
-        method: 'POST', body: JSON.stringify({ righe, rimuovi_ids: piano.rimossi.map(r => r.id) }),
+        method: 'POST', body: JSON.stringify({ righe, rimuovi_ids: piano.rimossi.map(r => r.id), ricorda_ids: [...ricorda] }),
       });
       setEsito(res); onSaved();
     } catch (e: any) { setErr(e.message); }
@@ -126,6 +129,30 @@ export function ImportSociDialog({ open, onOpenChange, onSaved }: Props) {
                 <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
                   <div className="mb-1 font-medium">Da correggere nel file prima di procedere:</div>
                   {piano.errori.map((e, i) => <div key={i}>{e}</div>)}
+                </div>
+              )}
+
+              {piano.nomi_diversi.length > 0 && (
+                <div>
+                  <div className="mb-1 text-sm font-medium">Stessa tessera, nome scritto diversamente</div>
+                  <p className="mb-1 text-xs text-neutral-500">
+                    Il socio è riconosciuto dal numero tessera e resta il nome in anagrafica.
+                    Spunta per ricordare anche il nome del file (vale per i prossimi import, anche dei partecipanti agli eventi).
+                  </p>
+                  <div className={box}>
+                    {piano.nomi_diversi.map(n => (
+                      <label key={n.socio_id} className={`${row} cursor-pointer`}>
+                        <input type="checkbox" checked={ricorda.has(n.socio_id)} onChange={e => {
+                          const next = new Set(ricorda);
+                          if (e.target.checked) next.add(n.socio_id); else next.delete(n.socio_id);
+                          setRicorda(next);
+                        }} />
+                        <span className="flex-1 truncate">{n.anagrafica}</span>
+                        <span className="text-xs text-neutral-500">nel file:</span>
+                        <span className="truncate font-medium">{n.file}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -222,7 +249,8 @@ export function ImportSociDialog({ open, onOpenChange, onSaved }: Props) {
           {esito && (
             <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800">
               Elenco aggiornato: {esito.aggiunti} aggiunti, {esito.rinumerati} tessere aggiornate, {esito.riattivati} rientrati,
-              {' '}{esito.disattivati} tolti (restano nello storico), {esito.eliminati} eliminati.
+              {' '}{esito.disattivati} tolti (restano nello storico), {esito.eliminati} eliminati
+              {esito.varianti > 0 && `, ${esito.varianti} varianti del nome ricordate`}.
             </div>
           )}
 

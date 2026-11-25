@@ -1,4 +1,4 @@
-import { normalizza, RigaFile } from './import-partecipanti.util';
+import { normalizza, RigaFile, righeDaTabella, Tabella, trovaColonnaNomi } from './import-partecipanti.util';
 
 export interface PdfTextItem { str: string; x: number; y: number; }
 
@@ -21,38 +21,52 @@ function righeDaItems(items: PdfTextItem[], tolleranza = 2): PdfTextItem[][] {
 }
 
 /**
- * Estrae la colonna "Socio" da pagine di item testuali con coordinate.
- * L'intervallo x della colonna è delimitato dai punti medi verso le
- * intestazioni adiacenti. Ritorna null se nessuna pagina ha l'intestazione.
+ * Ricostruisce la tabella da pagine di item testuali con coordinate.
+ * Intestazione: la riga con "Socio" (o un'intestazione nota tipo "Cognome e nome");
+ * ogni intestazione definisce una colonna delimitata dai punti medi verso le adiacenti.
+ * Le pagine successive senza intestazione riusano le colonne. null se nessuna intestazione.
  */
-export function estraiColonnaSocioDaPagine(pagine: PdfTextItem[][]): RigaFile[] | null {
-  let range: { sx: number; dx: number } | null = null;
-  const out: RigaFile[] = [];
+export function tabellaDaPagine(pagine: PdfTextItem[][]): Tabella | null {
+  let colonne: { sx: number; dx: number }[] | null = null;
+  let intestazioni: string[] | null = null;
+  let colonna = 0;
+  const righeOut: Tabella['righe'] = [];
   let riga = 0;
   for (const items of pagine) {
     const righe = righeDaItems(items);
     let start = 0;
-    const idx = righe.findIndex(r => r.some(it => normalizza(it.str) === 'socio'));
+    // intestazione: "socio" ovunque nella pagina, altrimenti un'intestazione nota nelle prime 5 righe
+    let idx = righe.findIndex(r => r.some(it => normalizza(it.str) === 'socio'));
+    if (idx < 0) idx = righe.slice(0, 5).findIndex(r => trovaColonnaNomi(r.map(it => it.str)) >= 0);
     if (idx >= 0) {
       const header = righe[idx];
-      const i = header.findIndex(it => normalizza(it.str) === 'socio');
-      const sx = i > 0 ? (header[i - 1].x + header[i].x) / 2 : header[i].x - 20;
-      const dx = i < header.length - 1 ? (header[i].x + header[i + 1].x) / 2 : Infinity;
-      range = { sx, dx };
+      colonne = header.map((it, i) => ({
+        sx: i > 0 ? (header[i - 1].x + it.x) / 2 : -Infinity,
+        dx: i < header.length - 1 ? (it.x + header[i + 1].x) / 2 : Infinity,
+      }));
+      if (!intestazioni) {
+        intestazioni = header.map(it => it.str.trim());
+        colonna = Math.max(0, trovaColonnaNomi(intestazioni));
+      }
       start = idx + 1;
     }
-    if (!range) continue;
-    const rg = range;
+    if (!colonne) continue;
+    const cols = colonne;
     for (let r = start; r < righe.length; r++) {
       riga++;
-      const testo = righe[r]
-        .filter(it => it.x >= rg.sx && it.x < rg.dx)
-        .map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
-      if (!testo || /^\d+$/.test(testo)) continue;
-      out.push({ riga, testo });
+      const celle = cols.map(c => righe[r]
+        .filter(it => it.x >= c.sx && it.x < c.dx)
+        .map(it => it.str).join(' ').replace(/\s+/g, ' ').trim());
+      righeOut.push({ riga, celle });
     }
   }
-  return range ? out : null;
+  return colonne ? { intestazioni, righe: righeOut, colonna, colonna2: null } : null;
+}
+
+/** Colonna proposta (di norma "Socio") dalle pagine del PDF. null se manca l'intestazione. */
+export function estraiColonnaSocioDaPagine(pagine: PdfTextItem[][]): RigaFile[] | null {
+  const t = tabellaDaPagine(pagine);
+  return t ? righeDaTabella(t, t.colonna) : null;
 }
 
 /** Legge un PDF e restituisce, per pagina, gli item testuali con coordinate. */

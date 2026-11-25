@@ -15,7 +15,11 @@ interface Props {
   onSaved: () => void;
 }
 
+interface InfoColonna { indice: number; intestazione: string; esempi: string[]; }
 interface Preview {
+  colonne: InfoColonna[];
+  colonna: number;
+  colonna2: number | null;
   trovati: { riga: number; testo: string; socio: Socio }[];
   non_trovati: { riga: number; testo: string }[];
   ambigui: { riga: number; testo: string; candidati: Socio[] }[];
@@ -24,7 +28,7 @@ interface Preview {
 /** Riga del file senza un socio univoco: l'utente decide cosa farne. */
 interface DaRisolvere { riga: number; testo: string; candidati: Socio[]; }
 type Scelta =
-  | { tipo: 'associa'; socio: Socio | null; cerca: string }
+  | { tipo: 'associa'; socio: Socio | null; cerca: string; ricorda: boolean }
   | { tipo: 'crea'; cognome: string; nome: string; tessera: string; creato?: Socio }
   | { tipo: 'ignora' };
 
@@ -47,7 +51,7 @@ export function ImportFileDialog({ open, onOpenChange, evento, current, onSaved 
   const [preview, setPreview] = useState<Preview | null>(null);
   const [soci, setSoci] = useState<Socio[]>([]);
   const [scelte, setScelte] = useState<Record<number, Scelta>>({});
-  const [fileName, setFileName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -55,16 +59,18 @@ export function ImportFileDialog({ open, onOpenChange, evento, current, onSaved 
 
   useEffect(() => {
     if (!open) return;
-    setPreview(null); setScelte({}); setFileName(''); setErr(null); setLoading(false); setSaving(false);
+    setPreview(null); setScelte({}); setFile(null); setErr(null); setLoading(false); setSaving(false);
     api<Socio[]>('/soci').then(setSoci).catch(() => setSoci([]));
   }, [open]);
 
-  async function onFile(f: File | undefined) {
+  /** Analizza il file; colonna/colonna2 assenti = colonne proposte automaticamente. */
+  async function carica(f: File | undefined | null, colonne?: { colonna: number; colonna2: number | null }) {
     if (!f) return;
-    setFileName(f.name); setErr(null); setPreview(null); setScelte({}); setLoading(true);
+    setFile(f); setErr(null); setScelte({}); setLoading(true);
+    const campi: Record<string, string> = colonne ? { colonna: String(colonne.colonna), colonna2: colonne.colonna2 == null ? '' : String(colonne.colonna2) } : {};
     try {
-      setPreview(await apiUpload<Preview>(`/eventi/${evento.id}/partecipazioni/import`, f));
-    } catch (e: any) { setErr(e.message); }
+      setPreview(await apiUpload<Preview>(`/eventi/${evento.id}/partecipazioni/import`, f, campi));
+    } catch (e: any) { setErr(e.message); setPreview(null); }
     finally { setLoading(false); if (inputRef.current) inputRef.current.value = ''; }
   }
 
@@ -75,7 +81,7 @@ export function ImportFileDialog({ open, onOpenChange, evento, current, onSaved 
 
   const set = (riga: number, s: Scelta) => setScelte(prev => ({ ...prev, [riga]: s }));
   const scegli = (r: DaRisolvere, tipo: Scelta['tipo']) => {
-    if (tipo === 'associa') set(r.riga, { tipo, socio: null, cerca: '' });
+    if (tipo === 'associa') set(r.riga, { tipo, socio: null, cerca: '', ricorda: true });
     else if (tipo === 'crea') set(r.riga, { tipo, ...proponiNome(r.testo), tessera: '' });
     else set(r.riga, { tipo });
   };
@@ -120,7 +126,7 @@ export function ImportFileDialog({ open, onOpenChange, evento, current, onSaved 
     setErr(null); setSaving(true);
     try {
       // 1. crea i nuovi soci (quelli gia' creati in un tentativo precedente vengono riusati)
-      const creati: Socio[] = [];
+      const creati = new Map<number, Socio>(); // riga del file -> socio creato
       for (const r of daRisolvere) {
         const s = scelte[r.riga];
         if (s?.tipo !== 'crea') continue;
@@ -137,10 +143,18 @@ export function ImportFileDialog({ open, onOpenChange, evento, current, onSaved 
           const creato = socio;
           set(r.riga, { ...s, creato });
         }
-        creati.push(socio);
+        creati.set(r.riga, socio);
       }
-      // 2. registra i partecipanti (esistenti + associati + creati)
-      const nuovi = [...daAggiungere(), ...creati.filter(c => !currentIds.has(c.id))];
+      // 2. ricorda i nomi del file come varianti (associati con spunta, creati con nome diverso)
+      const alias = daRisolvere.flatMap(r => {
+        const s = scelte[r.riga];
+        if (s?.tipo === 'associa' && s.socio && s.ricorda) return [{ socio_id: s.socio.id, testo: r.testo }];
+        const c = creati.get(r.riga);
+        return c ? [{ socio_id: c.id, testo: r.testo }] : [];
+      });
+      if (alias.length) await api('/soci/alias', { method: 'POST', body: JSON.stringify({ alias }) });
+      // 3. registra i partecipanti (esistenti + associati + creati)
+      const nuovi = [...daAggiungere(), ...[...creati.values()].filter(c => !currentIds.has(c.id))];
       const visti = new Set(current.map(c => c.socio_id));
       const partecipanti = [
         ...current.map(c => ({ socio_id: c.socio_id, posizione_prova: c.posizione_prova ?? undefined })),
@@ -162,13 +176,39 @@ export function ImportFileDialog({ open, onOpenChange, evento, current, onSaved 
             con i nomi dei partecipanti: viene letta la colonna &quot;Socio&quot;
             (o la prima colonna se non c&apos;è intestazione).
           </p>
-          <input ref={inputRef} type="file" accept=".xlsx,.csv,.pdf" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
+          <input ref={inputRef} type="file" accept=".xlsx,.csv,.pdf" className="hidden" onChange={e => carica(e.target.files?.[0])} />
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => inputRef.current?.click()} disabled={loading || saving}>
               {loading ? 'Analisi…' : 'Scegli file'}
             </Button>
-            {fileName && <span className="truncate text-sm text-neutral-600">{fileName}</span>}
+            {file && <span className="truncate text-sm text-neutral-600">{file.name}</span>}
           </div>
+
+          {preview && file && (
+            <div className="grid gap-2 rounded border bg-neutral-50 p-2.5 sm:grid-cols-2">
+              <label className="text-xs font-medium text-neutral-600">
+                Colonna con i nomi
+                <select className="mt-1 h-9 w-full rounded-md border border-line bg-paper px-2 text-sm"
+                  value={preview.colonna} disabled={loading || saving}
+                  onChange={e => carica(file, { colonna: Number(e.target.value), colonna2: preview.colonna2 === Number(e.target.value) ? null : preview.colonna2 })}>
+                  {preview.colonne.map(c => (
+                    <option key={c.indice} value={c.indice}>{c.intestazione}{c.esempi[0] ? ` — es. ${c.esempi[0]}` : ''}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-medium text-neutral-600">
+                Unisci con (es. Nome se Cognome è separato)
+                <select className="mt-1 h-9 w-full rounded-md border border-line bg-paper px-2 text-sm"
+                  value={preview.colonna2 ?? ''} disabled={loading || saving}
+                  onChange={e => carica(file, { colonna: preview.colonna, colonna2: e.target.value === '' ? null : Number(e.target.value) })}>
+                  <option value="">Nessuna</option>
+                  {preview.colonne.filter(c => c.indice !== preview.colonna).map(c => (
+                    <option key={c.indice} value={c.indice}>{c.intestazione}{c.esempi[0] ? ` — es. ${c.esempi[0]}` : ''}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
 
           {preview && (
             <div className="space-y-3">
@@ -265,6 +305,10 @@ function RigaDaRisolvere({ r, scelta, soci, errore, onTipo, onChange }: {
               <span className="text-xs text-neutral-500">#{scelta.socio.numero_tessera}</span>
               <span className="font-medium">{scelta.socio.cognome} {scelta.socio.nome}</span>
               <button type="button" className="text-xs text-porsche underline" onClick={() => onChange({ ...scelta, socio: null })}>cambia</button>
+              <label className="ml-auto flex items-center gap-1.5 text-xs text-neutral-600">
+                <input type="checkbox" checked={scelta.ricorda} onChange={e => onChange({ ...scelta, ricorda: e.target.checked })} />
+                ricorda &quot;{r.testo}&quot; per i prossimi import
+              </label>
             </div>
           ) : (
             <>

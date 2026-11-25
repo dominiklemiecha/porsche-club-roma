@@ -3,7 +3,12 @@ export type Scope = 'turismo' | 'pista' | 'istituzionale' | 'totale';
 
 export interface Anno { anno: number; attivo: boolean; }
 
-export interface Socio { id: number; numero_tessera: number; nome: string; cognome: string; modello_auto?: string | null; _count?: { partecipazioni: number }; }
+export interface Socio {
+  id: number; numero_tessera: number; nome: string; cognome: string; modello_auto?: string | null;
+  _count?: { partecipazioni: number };
+  /** varianti del nome ricordate per gli import */
+  alias?: { id: number; testo: string }[];
+}
 
 export interface Evento {
   id: number;

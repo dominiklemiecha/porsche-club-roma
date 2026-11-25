@@ -48,8 +48,15 @@ export class EventiController {
 
   @Post(':id/partecipazioni/import')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
-  importFile(@Param('id', ParseIntPipe) id: number, @UploadedFile() file?: { buffer: Buffer }) {
+  importFile(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file?: { buffer: Buffer },
+    @Body('colonna') colonna?: string,
+    @Body('colonna2') colonna2?: string,
+  ) {
     if (!file?.buffer) throw new BadRequestException('Nessun file caricato');
-    return this.importSvc.preview(id, file.buffer);
+    // campi multipart: assente = proposta automatica; colonna2 "" = nessuna seconda colonna
+    const num = (v?: string) => (v != null && /^\d+$/.test(v) ? Number(v) : undefined);
+    return this.importSvc.preview(id, file.buffer, num(colonna), colonna2 === undefined ? undefined : num(colonna2) ?? null);
   }
 }

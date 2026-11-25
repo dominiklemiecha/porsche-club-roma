@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
-import { parseCsv, sniffFormato } from '../eventi/import-partecipanti.util';
+import { chiaveNome, parseCsv, sniffFormato } from '../eventi/import-partecipanti.util';
 import { conflittiTessereNuovi, estraiElencoSoci, pianificaImport, Piano, RigaSocio } from './import-soci.util';
 import { ConfermaImportSociDto } from './dto/import-soci.dto';
 
@@ -45,6 +45,13 @@ export class ImportSociService {
       for (const r of piano.riattivati) {
         await tx.socio.update({ where: { id: r.id }, data: { numero_tessera: r.numero_tessera, disattivato_il: null } });
       }
+      // varianti del nome confermate dall'utente (stessa tessera, nome scritto diverso)
+      const ricorda = new Set(dto.ricorda_ids ?? []);
+      const varianti = piano.nomi_diversi.filter(n => ricorda.has(n.socio_id)).flatMap(n => {
+        const r = righe.find(x => x.riga === n.riga)!;
+        return [`${r.cognome} ${r.nome}`, `${r.nome} ${r.cognome}`].map(testo => ({ socio_id: n.socio_id, testo, chiave: chiaveNome(testo) }));
+      });
+      if (varianti.length) await tx.socioAlias.createMany({ data: varianti, skipDuplicates: true });
       if (piano.nuovi.length) {
         await tx.socio.createMany({
           data: piano.nuovi.map(n => ({ cognome: n.cognome, nome: n.nome, numero_tessera: n.numero_tessera! })),
@@ -53,6 +60,7 @@ export class ImportSociService {
       return {
         aggiunti: piano.nuovi.length, rinumerati: piano.rinumerati.length, riattivati: piano.riattivati.length,
         eliminati: daEliminare.length, disattivati: daDisattivare.length, invariati: piano.invariati,
+        varianti: varianti.length / 2,
       };
     }, { timeout: 60_000, maxWait: 10_000 });
   }
@@ -61,10 +69,10 @@ export class ImportSociService {
     const soci = await db.socio.findMany({
       select: {
         id: true, numero_tessera: true, nome: true, cognome: true, disattivato_il: true,
-        _count: { select: { partecipazioni: true } },
+        _count: { select: { partecipazioni: true } }, alias: { select: { chiave: true } },
       },
     });
-    return soci.map(({ _count, ...s }) => ({ ...s, partecipazioni: _count.partecipazioni }));
+    return soci.map(({ _count, alias, ...s }) => ({ ...s, partecipazioni: _count.partecipazioni, alias: alias.map(a => a.chiave) }));
   }
 
   private async estraiRighe(buffer: Buffer): Promise<RigaSocio[]> {

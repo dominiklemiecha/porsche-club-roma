@@ -39,9 +39,25 @@ model Socio {
   /// Valorizzato quando il socio esce dall'elenco ma ha partecipazioni da conservare.
   disattivato_il  DateTime?
   partecipazioni  Partecipazione[]
+  alias           SocioAlias[]
 
   @@index([numero_tessera])
   @@map("soci")
+}
+
+/// Varianti del nome di un socio (es. "Gian Luca" / "Gianluca") ricordate per gli import.
+model SocioAlias {
+  id          Int      @id @default(autoincrement())
+  socio_id    Int
+  testo       String   @db.VarChar(200)
+  /// testo normalizzato: minuscolo, senza accenti, solo lettere
+  chiave      String   @db.VarChar(200)
+  created_at  DateTime @default(now())
+  socio       Socio    @relation(fields: [socio_id], references: [id], onDelete: Cascade)
+
+  @@unique([socio_id, chiave])
+  @@index([chiave])
+  @@map("soci_alias")
 }
 
 model Evento {

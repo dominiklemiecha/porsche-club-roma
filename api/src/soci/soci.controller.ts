@@ -5,7 +5,7 @@ import { SociService } from './soci.service';
 import { ImportSociService } from './import-soci.service';
 import { CreateSocioDto } from './dto/create-socio.dto';
 import { UpdateSocioDto } from './dto/update-socio.dto';
-import { ConfermaImportSociDto } from './dto/import-soci.dto';
+import { AggiungiAliasDto, ConfermaImportSociDto } from './dto/import-soci.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('soci')
@@ -24,6 +24,10 @@ export class SociController {
 
   @Post('import/conferma')
   importConferma(@Body() dto: ConfermaImportSociDto) { return this.importSvc.conferma(dto); }
+
+  /** Varianti del nome ricordate per gli import (es. "Gian Luca" / "Gianluca"). */
+  @Post('alias') aggiungiAlias(@Body() dto: AggiungiAliasDto) { return this.svc.aggiungiAlias(dto.alias); }
+  @Delete('alias/:id') eliminaAlias(@Param('id', ParseIntPipe) id: number) { return this.svc.eliminaAlias(id); }
 
   @Patch(':id') update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSocioDto) { return this.svc.update(id, dto); }
   @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) { return this.svc.remove(id); }

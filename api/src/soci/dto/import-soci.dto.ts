@@ -8,6 +8,16 @@ export class RigaSocioItem {
   @IsOptional() @IsInt() @Min(1) numero_tessera?: number | null;
 }
 
+export class AliasItem {
+  @IsInt() socio_id!: number;
+  @IsString() @MaxLength(200) testo!: string;
+}
+
+export class AggiungiAliasDto {
+  @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => AliasItem)
+  alias!: AliasItem[];
+}
+
 export class ConfermaImportSociDto {
   @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => RigaSocioItem)
   righe!: RigaSocioItem[];
@@ -15,4 +25,8 @@ export class ConfermaImportSociDto {
   /** id dei soci in uscita mostrati nell'anteprima: devono coincidere con quelli ricalcolati */
   @IsArray() @IsInt({ each: true })
   rimuovi_ids!: number[];
+
+  /** id dei soci per cui ricordare il nome del file come variante */
+  @IsOptional() @IsArray() @IsInt({ each: true })
+  ricorda_ids?: number[];
 }
